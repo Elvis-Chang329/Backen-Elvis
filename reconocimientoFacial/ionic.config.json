@@ -1,0 +1,7 @@
+{
+  "name": "reconocimientoFacial",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

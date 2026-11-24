@@ -1,0 +1,52 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Reconocimiento Facial</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Identificación de Usuario</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-input label="ID de Usuario" labelPlacement="floating" [(ngModel)]="userId" placeholder="Ej. usr_001"></ion-input>
+      </ion-item>
+
+      <ion-button expand="block" (click)="capturarFoto()" class="ion-margin-top">
+        Capturar Rostro
+      </ion-button>
+
+      <div *ngIf="fotoBase64" class="ion-text-center ion-margin-top">
+        <img [src]="'data:image/jpeg;base64,' + fotoBase64" alt="Rostro capturado" style="max-height: 250px; border-radius: 12px; object-fit: cover;" />
+      </div>
+
+      <div class="ion-margin-top">
+        <ion-button expand="block" color="success" (click)="registrar()" [disabled]="!fotoBase64 || cargando">
+          Registrar Rostro
+        </ion-button>
+        <ion-button expand="block" color="tertiary" (click)="verificar()" [disabled]="!fotoBase64 || cargando">
+          Verificar Rostro
+        </ion-button>
+        <ion-button expand="block" fill="outline" (click)="consultarEstado()" [disabled]="cargando">
+          Consultar Estado
+        </ion-button>
+      </div>
+
+      <div *ngIf="cargando" class="ion-text-center ion-margin-top">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Procesando con AWS...</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card *ngIf="mensajeResultado">
+    <ion-card-header>
+      <ion-card-title>Resultado</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p style="white-space: pre-wrap;">{{ mensajeResultado }}</p>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

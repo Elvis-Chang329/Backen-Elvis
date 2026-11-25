@@ -15,7 +15,7 @@ El sistema implementa una arquitectura híbrida orientada a microservicios y bio
 
 1. **Frontend Móvil (Ionic 9 + Angular Standalone + Capacitor 8):**
    * Captura en vivo y prueba de vida (*Face Liveness*) con óvalo facial, estimación de profundidad y secuencia de destellos de color (*Color Flashing*).
-   * Comunicación asíncrona hacia AWS mediante Function URLs protegidas y hacia la API Backend en `http://api.aplicacionesweb2026.com:8080`.
+   * Comunicación asíncrona hacia AWS mediante Function URLs protegidas y hacia la API Backend en `http://api.aplicacionesweb2026.com:3000`.
 2. **Capa Serverless (AWS Lambda):**
    * Tres funciones Lambda configuradas en la región `us-east-1` que interactúan directamente con **Amazon Rekognition** y **Amazon S3**.
 3. **Capa de Almacenamiento e Indexación Biométrica:**
@@ -34,7 +34,7 @@ El sistema implementa una arquitectura híbrida orientada a microservicios y bio
 | **Región de AWS** | `us-east-1` (N. Virginia) |
 | **Bucket de Amazon S3** | `rekognition-rostros-elvis-2026` |
 | **Colección Rekognition** | `rostros-proyecto-final` |
-| **API Backend HTTP** | `http://api.aplicacionesweb2026.com:8080` |
+| **API Backend HTTP** | `http://api.aplicacionesweb2026.com:3000` |
 
 ### B. Rol IAM y Políticas de Permisos
 Las Lambdas ejecutan bajo un rol IAM con la política administrada `AWSLambdaBasicExecutionRole` y una política en línea con permisos:
@@ -288,6 +288,6 @@ Para compilar el proyecto desde cero en cualquier computadora:
 |---|---|---|
 | **00:00 - 01:30** | **Introducción y Arquitectura** | Presentación personal. Explicar el problema de seguridad de fotos estáticas y la solución de **AWS Face Liveness** con estimación de profundidad 3D y análisis de reflejos lumínicos (*Color Flashing*). Mostrar el repositorio GitHub y la estructura monorepo. |
 | **01:30 - 03:30** | **Infraestructura Cloud en AWS** | Explicar la región `us-east-1`, el bucket `rekognition-rostros-elvis-2026`, la colección `rostros-proyecto-final`, las Function URLs con CORS y los roles IAM de mínimo privilegio. |
-| **03:30 - 06:00** | **Demostración en Vivo (APK)** | Conectar el celular o emulador con `nombre_V1.apk`:<br>1. Ingresar ID de usuario (`joel`).<br>2. Iniciar **Registrar con Liveness** (mostrar cámara en vivo, alineación en el óvalo y destellos de color).<br>3. Observar confirmación de registro en AWS Rekognition.<br>4. Iniciar **Verificar con Liveness** y validar coincidencia 1:1 contra la colección.<br>5. Demostrar la consulta de estado en la Lambda y en la API Backend (`http://api.aplicacionesweb2026.com:8080`). |
+| **03:30 - 06:00** | **Demostración en Vivo (APK)** | Conectar el celular o emulador con `nombre_V1.apk`:<br>1. Ingresar ID de usuario (`joel`).<br>2. Iniciar **Registrar con Liveness** (mostrar cámara en vivo, alineación en el óvalo y destellos de color).<br>3. Observar confirmación de registro en AWS Rekognition.<br>4. Iniciar **Verificar con Liveness** y validar coincidencia 1:1 contra la colección.<br>5. Demostrar la consulta de estado en la Lambda y en la API Backend (`http://api.aplicacionesweb2026.com:3000`). |
 | **06:00 - 07:15** | **Mitigación de Ataques (Spoofing)** | Explicar cómo el sistema rechaza una fotografía impresa o mostrada en otro teléfono gracias a la variación cromática dinámica del Liveness. |
 | **07:15 - 08:00** | **Conclusiones y Preguntas** | Síntesis de resultados, tiempo de respuesta de las Function URLs y cierre formal.

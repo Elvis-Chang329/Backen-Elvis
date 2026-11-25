@@ -15,8 +15,8 @@ export class FaceRecognitionService {
   private readonly estadoUrl =
     'https://5chbngaiyxbdgwka72os6nneoa0pslmx.lambda-url.us-east-1.on.aws';
 
-  // API Backend HTTP
-  private readonly backendApiUrl = 'http://api.aplicacionesweb2026.com:8080';
+  // API Backend HTTP (EC2 / Docker en puerto 3000)
+  private readonly backendApiUrl = 'http://api.aplicacionesweb2026.com:3000';
 
   // Timeout para invocaciones AWS Lambda incluyendo cold starts (30 segundos)
   private readonly TIMEOUT_MS = 30000;
@@ -121,7 +121,7 @@ export class FaceRecognitionService {
         const resBackend = await this.consultarEstadoBackend(userId);
         return {
           ...resBackend,
-          fuente: 'Servidor Backend HTTP (api.aplicacionesweb2026.com:8080)'
+          fuente: 'Servidor Backend HTTP (api.aplicacionesweb2026.com:3000)'
         };
       } catch (errBackend) {
         if (err?.status === 0) {

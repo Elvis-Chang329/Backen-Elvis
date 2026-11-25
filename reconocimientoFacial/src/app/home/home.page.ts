@@ -347,15 +347,15 @@ export class HomePage implements OnDestroy {
 
   async consultarEstadoBackend() {
     if (!this.userId.trim()) return;
-    this.setCargando(true, `Consultando API Backend en http://api.aplicacionesweb2026.com:8080...`);
+    this.setCargando(true, `Consultando API Backend en http://api.aplicacionesweb2026.com:3000...`);
     this.resultado = null;
 
     try {
       const res = await this.faceService.consultarEstadoBackend(this.userId.trim());
       this.resultado = {
         tipo: 'success',
-        titulo: 'Estado en API Backend (HTTP)',
-        mensaje: `Respuesta recibida desde api.aplicacionesweb2026.com:8080 para "${this.userId}".`,
+        titulo: 'Estado en API Backend (HTTP :3000)',
+        mensaje: `Respuesta recibida desde api.aplicacionesweb2026.com:3000 para "${this.userId}".`,
         detalles: res
       };
     } catch (err: any) {

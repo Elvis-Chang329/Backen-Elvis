@@ -1,29 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { RekognitionClient, CreateFaceLivenessSessionCommand, GetFaceLivenessSessionResultsCommand } from '@aws-sdk/client-rekognition';
+import { CreateFaceLivenessSessionCommand, GetFaceLivenessSessionResultsCommand } from '@aws-sdk/client-rekognition';
 import sequelize from './config/database';
+import rekognitionClient from './config/rekognition';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import censoRoutes from './routes/censo.routes';
 import biometriaRoutes from './routes/biometria.routes';
+import { verificarLivenessContraFotoPerfil } from './controllers/liveness.controller';
 import './models/biometriaLog.model'; // Asegura registro del modelo para sync de Sequelize
 import { seedAdminUser } from './utils/seedAdmin';
 
 dotenv.config();
 
 const app = express();
-
-// Inicializamos el cliente de Rekognition (el SDK leerá automáticamente tus credenciales de AWS)
-const rekognitionClient = new RekognitionClient({
-    region: (process.env.AWS_REGION || "us-east-1").trim(),
-    ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
-        credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY.trim(),
-        }
-    } : {})
-});
 
 // Configuración de CORS para navegadores, Android y Lambdas
 const corsOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : '*';
@@ -110,6 +101,8 @@ app.get("/api/liveness/session-results/:sessionId", async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+app.post('/api/liveness/verify', verificarLivenessContraFotoPerfil);
 
 const PORT = process.env.PORT || 3000;
 

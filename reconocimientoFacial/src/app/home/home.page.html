@@ -2,15 +2,15 @@
   <ion-toolbar class="toolbar-custom">
     <div class="header-content">
       <div class="header-title-box">
-        <ion-icon name="scan-outline" class="header-icon"></ion-icon>
+        <ion-icon name="shield-checkmark-outline" class="header-icon"></ion-icon>
         <div>
           <h1 class="app-title">BioAuth</h1>
-          <p class="app-subtitle">Reconocimiento Facial AWS</p>
+          <p class="app-subtitle">Face Liveness & Rekognition</p>
         </div>
       </div>
       <ion-chip class="cloud-chip">
         <ion-icon name="cloud-done-outline" color="success"></ion-icon>
-        <ion-label>AWS Cloud</ion-label>
+        <ion-label>AWS Active</ion-label>
       </ion-chip>
     </div>
   </ion-toolbar>
@@ -19,52 +19,13 @@
 <ion-content [fullscreen]="true" class="main-content">
   <div class="content-wrapper">
 
-    <!-- Tarjeta del Visor Biométrico -->
-    <div class="camera-card">
-      <div class="scanner-frame" [class.has-photo]="fotoBase64" (click)="!fotoBase64 ? capturarFoto() : null">
-        <!-- Retículas en las esquinas -->
-        <span class="corner top-left"></span>
-        <span class="corner top-right"></span>
-        <span class="corner bottom-left"></span>
-        <span class="corner bottom-right"></span>
-
-        <!-- Contenido si NO hay foto -->
-        <div *ngIf="!fotoBase64" class="empty-state">
-          <div class="icon-pulse">
-            <ion-icon name="camera-outline" class="scanner-center-icon"></ion-icon>
-          </div>
-          <h3>Captura Biométrica</h3>
-          <p>Toca aquí para encuadrar tu rostro</p>
-          <ion-button size="small" class="btn-scan" (click)="capturarFoto()">
-            <ion-icon slot="start" name="scan-outline"></ion-icon>
-            Abrir Cámara
-          </ion-button>
-        </div>
-
-        <!-- Contenido si HAY foto -->
-        <div *ngIf="fotoBase64" class="photo-state">
-          <img [src]="'data:image/jpeg;base64,' + fotoBase64" alt="Rostro capturado" class="captured-image" />
-          <div class="scan-laser"></div>
-          <div class="photo-overlay">
-            <ion-badge color="success" class="badge-ready">
-              <ion-icon name="checkmark-circle"></ion-icon> Rostro Capturado
-            </ion-badge>
-            <ion-button fill="clear" size="small" class="btn-retake" (click)="capturarFoto()">
-              <ion-icon slot="start" name="refresh-outline"></ion-icon>
-              Repetir Foto
-            </ion-button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tarjeta de Identidad -->
+    <!-- Tarjeta de Identificación del Usuario -->
     <div class="modern-card">
       <div class="card-header-custom">
         <ion-icon name="person-outline" class="card-title-icon"></ion-icon>
         <div>
-          <h4>Identificación</h4>
-          <span class="helper-text">Introduce el identificador único del usuario</span>
+          <h4>Identidad de Usuario</h4>
+          <span class="helper-text">Introduce tu identificador para la prueba biométrica</span>
         </div>
       </div>
       <div class="input-container">
@@ -73,50 +34,68 @@
           labelPlacement="floating"
           fill="outline"
           [(ngModel)]="userId"
-          placeholder="Ej: usr_001"
+          placeholder="Ej: joel"
           class="custom-input">
         </ion-input>
       </div>
     </div>
 
-    <!-- Botones de Acción Biométricos -->
-    <div class="actions-container">
-      <div class="action-grid">
+    <!-- Módulo Principal: AWS Face Liveness -->
+    <div class="liveness-hero-card">
+      <div class="hero-header">
+        <div class="hero-badge">
+          <ion-icon name="finger-print-outline"></ion-icon>
+          <span>AWS REKOGNITION FACE LIVENESS</span>
+        </div>
+        <h3>Prueba de Vida en Vivo</h3>
+        <p>Verificación 3D contra spoofing, máscaras y fotos con detección de destellos lumínicos.</p>
+      </div>
+
+      <div class="hero-actions">
         <button
           type="button"
-          class="action-btn btn-register"
-          (click)="registrar()"
-          [disabled]="!fotoBase64 || !userId.trim() || cargando">
-          <ion-icon name="person-add-outline" class="btn-icon"></ion-icon>
-          <div class="btn-text">
-            <strong>Registrar</strong>
-            <span>Enrolar en AWS</span>
+          class="hero-btn btn-liveness-reg"
+          (click)="iniciarLiveness('registro')"
+          [disabled]="!userId.trim() || cargando">
+          <ion-icon name="videocam-outline"></ion-icon>
+          <div class="btn-info">
+            <strong>Registrar con Liveness</strong>
+            <span>Generar sesión y enrolar rostro</span>
           </div>
         </button>
 
         <button
           type="button"
-          class="action-btn btn-verify"
-          (click)="verificar()"
-          [disabled]="!fotoBase64 || !userId.trim() || cargando">
-          <ion-icon name="shield-checkmark-outline" class="btn-icon"></ion-icon>
-          <div class="btn-text">
-            <strong>Verificar</strong>
-            <span>Comparar 1:1</span>
+          class="hero-btn btn-liveness-ver"
+          (click)="iniciarLiveness('verificacion')"
+          [disabled]="!userId.trim() || cargando">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <div class="btn-info">
+            <strong>Verificar con Liveness</strong>
+            <span>Validar identidad en tiempo real</span>
           </div>
         </button>
       </div>
+    </div>
+
+    <!-- Módulo Secundario: Consultas de Estado -->
+    <div class="status-queries-container">
+      <button
+        type="button"
+        class="secondary-action-btn"
+        (click)="consultarEstado()"
+        [disabled]="!userId.trim() || cargando">
+        <ion-icon name="time-outline" class="icon-query"></ion-icon>
+        <span>Consultar Estado (AWS Lambda)</span>
+      </button>
 
       <button
         type="button"
-        class="action-btn btn-status"
-        (click)="consultarEstado()"
+        class="secondary-action-btn btn-backend-http"
+        (click)="consultarEstadoBackend()"
         [disabled]="!userId.trim() || cargando">
-        <ion-icon name="time-outline" class="btn-icon"></ion-icon>
-        <div class="btn-text">
-          <strong>Consultar Estado</strong>
-          <span>Historial biométrico de {{ userId || 'usuario' }}</span>
-        </div>
+        <ion-icon name="globe-outline" class="icon-query"></ion-icon>
+        <span>Consultar API Backend (HTTP :8080)</span>
       </button>
     </div>
 
@@ -124,7 +103,7 @@
     <div *ngIf="cargando" class="loading-card">
       <ion-spinner name="crescent" color="primary" class="loading-spinner"></ion-spinner>
       <div class="loading-text">
-        <strong>Procesando Biometría</strong>
+        <strong>Comunicando con AWS</strong>
         <span>{{ textoCarga }}</span>
       </div>
     </div>
@@ -149,11 +128,56 @@
       <div *ngIf="resultado.detalles" class="technical-details">
         <button type="button" class="btn-toggle-json" (click)="mostrarDetalles = !mostrarDetalles">
           <ion-icon [name]="mostrarDetalles ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
-          <span>{{ mostrarDetalles ? 'Ocultar datos técnicos' : 'Ver respuesta completa de AWS' }}</span>
+          <span>{{ mostrarDetalles ? 'Ocultar datos técnicos' : 'Ver respuesta JSON completa' }}</span>
         </button>
         <pre *ngIf="mostrarDetalles" class="json-viewer">{{ resultado.detalles | json }}</pre>
       </div>
     </div>
 
+  </div>
+
+  <!-- PANTALLA COMPLETA DE FACE LIVENESS (ÓVALO + CÁMARA + DESTELLOS DE COLOR) -->
+  <div class="liveness-fullscreen" *ngIf="mostrarLiveness">
+    <!-- Capa de destello de color para análisis lumínico 3D -->
+    <div class="color-flash-overlay" [style.background-color]="livenessColorFlash"></div>
+
+    <div class="liveness-header-bar">
+      <div class="liveness-header-info">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        <div>
+          <strong>Prueba de Vida (Liveness)</strong>
+          <span class="session-badge">Session: {{ sessionId }}</span>
+        </div>
+      </div>
+      <button type="button" class="btn-close-session" (click)="cancelarLiveness()">
+        <ion-icon name="close-outline"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Visor de Cámara con el Óvalo Biométrico -->
+    <div class="liveness-viewport">
+      <video #videoElement autoplay playsinline muted class="live-video"></video>
+
+      <!-- Máscara con el Óvalo Centrado -->
+      <div class="oval-mask-container">
+        <div class="biometric-oval" [ngClass]="livenessEstadoVisual">
+          <div class="oval-scanner-beam"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de Instrucciones y Progreso -->
+    <div class="liveness-footer">
+      <div class="instruction-container">
+        <span class="mode-tag">{{ modoLiveness === 'registro' ? 'Enrolamiento' : 'Verificación' }}</span>
+        <h3>{{ livenessPaso }}</h3>
+      </div>
+
+      <div class="progress-bar-wrapper">
+        <div class="progress-fill" [style.width.%]="livenessProgreso"></div>
+      </div>
+
+      <span class="progress-percentage">{{ livenessProgreso }}% completado</span>
+    </div>
   </div>
 </ion-content>

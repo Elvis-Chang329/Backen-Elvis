@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, ViewChild, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -30,10 +30,15 @@ import {
   closeOutline,
   globeOutline,
   videocamOutline,
-  fingerPrintOutline
+  fingerPrintOutline,
+  logInOutline,
+  logOutOutline,
+  imageOutline,
+  personCircleOutline
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { FaceRecognitionService } from '../services/face-recognition';
+import { AuthProfileService, UserData } from '../services/auth-profile.service';
 
 interface BiometriaResultado {
   tipo: 'success' | 'danger' | 'warning' | 'info';
@@ -59,9 +64,24 @@ interface BiometriaResultado {
     IonLabel
   ],
 })
-export class HomePage implements OnDestroy {
+export class HomePage implements OnInit, OnDestroy {
   @ViewChild('videoElement') videoElement?: ElementRef<HTMLVideoElement>;
 
+  // Vista activa: 'biometria' | 'perfil' | 'login'
+  vistaActual: 'biometria' | 'perfil' | 'login' = 'biometria';
+
+  // Sesión y Usuario
+  currentUser: UserData | null = null;
+  loginUsuario: string = 'joel';
+  loginPass: string = '123456';
+  loginError: string = '';
+  loginCargando: boolean = false;
+
+  // Estado Perfil y Foto
+  perfilStatusMsg: string = '';
+  subiendoFoto: boolean = false;
+
+  // Biometría
   userId: string = 'joel';
   fotoBase64: string | null = null;
   cargando: boolean = false;
@@ -82,6 +102,7 @@ export class HomePage implements OnDestroy {
 
   constructor(
     private faceService: FaceRecognitionService,
+    private authProfile: AuthProfileService,
     private cdr: ChangeDetectorRef
   ) {
     addIcons({
@@ -102,8 +123,122 @@ export class HomePage implements OnDestroy {
       closeOutline,
       globeOutline,
       videocamOutline,
-      fingerPrintOutline
+      fingerPrintOutline,
+      logInOutline,
+      logOutOutline,
+      imageOutline,
+      personCircleOutline
     });
+  }
+
+  ngOnInit() {
+    this.currentUser = this.authProfile.getCurrentUser();
+    if (this.currentUser) {
+      this.userId = this.currentUser.usuario || String(this.currentUser.id);
+    }
+  }
+
+  cambiarVista(nuevaVista: 'biometria' | 'perfil' | 'login') {
+    this.vistaActual = nuevaVista;
+    this.resultado = null;
+    this.perfilStatusMsg = '';
+    this.loginError = '';
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Flujo de Login contra el Backend (POST /api/auth/login en puerto 3000)
+   */
+  async ejecutarLogin() {
+    if (!this.loginUsuario.trim() || !this.loginPass.trim()) {
+      this.loginError = 'Por favor ingresa usuario y contraseña.';
+      return;
+    }
+
+    try {
+      this.loginCargando = true;
+      this.loginError = '';
+      this.cdr.detectChanges();
+
+      const user = await this.authProfile.login(this.loginUsuario.trim(), this.loginPass.trim());
+      this.currentUser = user;
+      this.userId = user.usuario || String(user.id);
+      this.vistaActual = 'biometria';
+      this.resultado = {
+        tipo: 'success',
+        titulo: 'Sesión Iniciada',
+        mensaje: `¡Bienvenido ${user.nombre || user.usuario}! Sesión vinculada con PostgreSQL.`
+      };
+    } catch (err: any) {
+      this.loginError = err?.message || 'Error al conectar con el servidor de autenticación.';
+    } finally {
+      this.loginCargando = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  logout() {
+    this.authProfile.logout();
+    this.currentUser = null;
+    this.vistaActual = 'login';
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Flujo de Perfil: Cámara o Galería con compresión a 600px / 0.7 JPEG
+   */
+  async pickFromCamera() {
+    await this.captureAndUpload(CameraSource.Camera);
+  }
+
+  async pickFromGallery() {
+    await this.captureAndUpload(CameraSource.Photos);
+  }
+
+  private async captureAndUpload(source: CameraSource) {
+    const targetUserId = this.currentUser?.id || this.userId || '1';
+
+    try {
+      this.subiendoFoto = true;
+      this.perfilStatusMsg = 'Abriendo cámara/galería...';
+      this.cdr.detectChanges();
+
+      const photo = await Camera.getPhoto({
+        source,
+        resultType: CameraResultType.DataUrl,
+        width: 600,
+        quality: 70,
+        allowEditing: false,
+      });
+
+      if (!photo.dataUrl) {
+        throw new Error('No se obtuvo imagen desde el dispositivo');
+      }
+
+      this.perfilStatusMsg = 'Comprimiendo imagen a 600px (calidad 70%)...';
+      this.cdr.detectChanges();
+
+      const compressed = await this.authProfile.compressDataUrl(photo.dataUrl, 600, 0.7);
+
+      this.perfilStatusMsg = 'Enviando foto a PostgreSQL (POST /api/users/:id/foto)...';
+      this.cdr.detectChanges();
+
+      const savedUrlOrBase64 = await this.authProfile.uploadUserPhoto(targetUserId, compressed);
+
+      if (this.currentUser) {
+        this.currentUser = { ...this.currentUser, foto: savedUrlOrBase64 };
+      }
+      this.perfilStatusMsg = '✅ Foto subida y guardada exitosamente en el backend.';
+    } catch (err: any) {
+      if (err?.message !== 'User cancelled photos app') {
+        this.perfilStatusMsg = err?.message || 'Error al seleccionar o subir la foto';
+      } else {
+        this.perfilStatusMsg = '';
+      }
+    } finally {
+      this.subiendoFoto = false;
+      this.cdr.detectChanges();
+    }
   }
 
   ngOnDestroy() {

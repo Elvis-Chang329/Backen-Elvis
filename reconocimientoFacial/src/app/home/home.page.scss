@@ -608,3 +608,344 @@
   85% { opacity: 1; }
   100% { top: 96%; opacity: 0; }
 }
+
+// ==========================================
+// ESTILOS DE NAVEGACIÓN, LOGIN Y PERFIL
+// ==========================================
+.nav-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .nav-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    ion-icon {
+      font-size: 14px;
+    }
+
+    &.active {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    &.btn-login-pill {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    &.btn-logout-pill {
+      background: rgba(244, 63, 94, 0.12);
+      color: #fb7185;
+      border-color: rgba(244, 63, 94, 0.25);
+    }
+  }
+}
+
+// 1. Tarjeta de Login
+.auth-card {
+  text-align: center;
+  padding: 24px 20px;
+
+  .auth-header {
+    margin-bottom: 20px;
+
+    .auth-avatar-circle {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 12px auto;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      ion-icon {
+        font-size: 40px;
+        color: #38bdf8;
+      }
+    }
+
+    h2 {
+      margin: 0 0 6px 0;
+      font-size: 20px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .auth-subtitle {
+      margin: 0;
+      font-size: 11px;
+      color: #94a3b8;
+
+      code {
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .auth-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    color: #fda4af;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    text-align: left;
+
+    ion-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+  }
+
+  .auth-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+}
+
+// 2. Tarjeta de Perfil
+.profile-card {
+  padding: 22px 18px;
+
+  .profile-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
+
+    .profile-avatar-wrapper {
+      position: relative;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      margin-bottom: 12px;
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+      overflow: visible;
+
+      .profile-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .profile-img-placeholder {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(30, 41, 59, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        ion-icon {
+          font-size: 48px;
+          color: #64748b;
+        }
+      }
+
+      .avatar-badge {
+        position: absolute;
+        bottom: -4px;
+        right: -6px;
+        background: #475569;
+        color: #f1f5f9;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        &.badge-active {
+          background: #10b981;
+        }
+      }
+    }
+
+    .profile-name {
+      margin: 0 0 4px 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .profile-role {
+      margin: 0;
+      font-size: 12px;
+      color: #94a3b8;
+
+      strong {
+        color: #38bdf8;
+        text-transform: capitalize;
+      }
+    }
+  }
+
+  .profile-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+
+    .profile-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .item-label {
+        font-size: 9px;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.5px;
+      }
+
+      .item-val {
+        font-size: 11px;
+        font-weight: 700;
+        color: #e2e8f0;
+        word-break: break-all;
+      }
+    }
+  }
+
+  .photo-upload-section {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px dashed rgba(56, 189, 248, 0.3);
+    border-radius: 14px;
+    padding: 16px;
+
+    h4 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .photo-tip {
+      margin: 0 0 14px 0;
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+
+      code {
+        color: #38bdf8;
+      }
+    }
+
+    .photo-buttons-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-photo-camera {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+
+      ion-icon {
+        color: #38bdf8;
+      }
+    }
+
+    .btn-photo-gallery {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(168, 85, 247, 0.4);
+
+      ion-icon {
+        color: #c084fc;
+      }
+    }
+
+    .uploading-feedback, .status-feedback {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .status-feedback {
+      color: #34d399;
+    }
+  }
+}
+
+// Botones Genéricos
+.btn-primary-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #ffffff;
+  border: none;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-text-action {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 8px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.session-active-pill {
+  margin-left: auto;
+  font-size: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}

@@ -5,13 +5,49 @@
         <ion-icon name="shield-checkmark-outline" class="header-icon"></ion-icon>
         <div>
           <h1 class="app-title">BioAuth</h1>
-          <p class="app-subtitle">Face Liveness & Rekognition</p>
+          <p class="app-subtitle">Face Liveness & Backend</p>
         </div>
       </div>
-      <ion-chip class="cloud-chip">
-        <ion-icon name="cloud-done-outline" color="success"></ion-icon>
-        <ion-label>AWS Active</ion-label>
-      </ion-chip>
+
+      <!-- Barra de Navegación de Vistas -->
+      <div class="nav-pills">
+        <button
+          type="button"
+          class="nav-pill-btn"
+          [class.active]="vistaActual === 'biometria'"
+          (click)="cambiarVista('biometria')">
+          <ion-icon name="finger-print-outline"></ion-icon>
+          <span>Liveness</span>
+        </button>
+
+        <button
+          type="button"
+          class="nav-pill-btn"
+          [class.active]="vistaActual === 'perfil'"
+          (click)="cambiarVista('perfil')">
+          <ion-icon name="person-outline"></ion-icon>
+          <span>Perfil</span>
+        </button>
+
+        <button
+          *ngIf="!currentUser"
+          type="button"
+          class="nav-pill-btn btn-login-pill"
+          [class.active]="vistaActual === 'login'"
+          (click)="cambiarVista('login')">
+          <ion-icon name="log-in-outline"></ion-icon>
+          <span>Login</span>
+        </button>
+
+        <button
+          *ngIf="currentUser"
+          type="button"
+          class="nav-pill-btn btn-logout-pill"
+          (click)="logout()">
+          <ion-icon name="log-out-outline"></ion-icon>
+          <span>Salir</span>
+        </button>
+      </div>
     </div>
   </ion-toolbar>
 </ion-header>
@@ -19,120 +55,283 @@
 <ion-content [fullscreen]="true" class="main-content">
   <div class="content-wrapper">
 
-    <!-- Tarjeta de Identificación del Usuario -->
-    <div class="modern-card">
-      <div class="card-header-custom">
-        <ion-icon name="person-outline" class="card-title-icon"></ion-icon>
-        <div>
-          <h4>Identidad de Usuario</h4>
-          <span class="helper-text">Introduce tu identificador para la prueba biométrica</span>
+    <!-- ========================================== -->
+    <!-- 1. VISTA: INICIAR SESIÓN (POST /api/auth/login) -->
+    <!-- ========================================== -->
+    <div *ngIf="vistaActual === 'login'" class="modern-card auth-card">
+      <div class="auth-header">
+        <div class="auth-avatar-circle">
+          <ion-icon name="person-circle-outline"></ion-icon>
         </div>
+        <h2>Iniciar Sesión</h2>
+        <p class="auth-subtitle">Conexión con PostgreSQL en <code>api.aplicacionesweb2026.com:3000</code></p>
       </div>
+
+      <div *ngIf="loginError" class="auth-error-banner">
+        <ion-icon name="alert-circle"></ion-icon>
+        <span>{{ loginError }}</span>
+      </div>
+
       <div class="input-container">
         <ion-input
-          label="ID de Usuario"
+          label="Usuario o Email"
           labelPlacement="floating"
           fill="outline"
-          [(ngModel)]="userId"
+          [(ngModel)]="loginUsuario"
           placeholder="Ej: joel"
           class="custom-input">
         </ion-input>
       </div>
-    </div>
 
-    <!-- Módulo Principal: AWS Face Liveness -->
-    <div class="liveness-hero-card">
-      <div class="hero-header">
-        <div class="hero-badge">
-          <ion-icon name="finger-print-outline"></ion-icon>
-          <span>AWS REKOGNITION FACE LIVENESS</span>
-        </div>
-        <h3>Prueba de Vida en Vivo</h3>
-        <p>Verificación 3D contra spoofing, máscaras y fotos con detección de destellos lumínicos.</p>
+      <div class="input-container" style="margin-top: 14px;">
+        <ion-input
+          label="Contraseña"
+          labelPlacement="floating"
+          type="password"
+          fill="outline"
+          [(ngModel)]="loginPass"
+          placeholder="Introduce tu contraseña"
+          class="custom-input">
+        </ion-input>
       </div>
 
-      <div class="hero-actions">
+      <div class="auth-actions">
         <button
           type="button"
-          class="hero-btn btn-liveness-reg"
-          (click)="iniciarLiveness('registro')"
-          [disabled]="!userId.trim() || cargando">
-          <ion-icon name="videocam-outline"></ion-icon>
-          <div class="btn-info">
-            <strong>Registrar con Liveness</strong>
-            <span>Generar sesión y enrolar rostro</span>
-          </div>
+          class="btn-primary-action"
+          (click)="ejecutarLogin()"
+          [disabled]="loginCargando">
+          <ion-spinner *ngIf="loginCargando" name="crescent"></ion-spinner>
+          <ion-icon *ngIf="!loginCargando" name="log-in-outline"></ion-icon>
+          <span>{{ loginCargando ? 'Iniciando sesión...' : 'Entrar al Sistema' }}</span>
         </button>
 
         <button
           type="button"
-          class="hero-btn btn-liveness-ver"
-          (click)="iniciarLiveness('verificacion')"
-          [disabled]="!userId.trim() || cargando">
+          class="btn-text-action"
+          (click)="cambiarVista('biometria')">
+          <span>Omitir e ir directo a Validación Facial</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. VISTA: PERFIL Y FOTO DE USUARIO -->
+    <!-- ========================================== -->
+    <div *ngIf="vistaActual === 'perfil'" class="modern-card profile-card">
+      <div class="profile-hero">
+        <div class="profile-avatar-wrapper">
+          <img
+            *ngIf="currentUser?.foto"
+            [src]="currentUser?.foto"
+            alt="Foto de perfil"
+            class="profile-img" />
+          <div *ngIf="!currentUser?.foto" class="profile-img-placeholder">
+            <ion-icon name="person-outline"></ion-icon>
+          </div>
+          <span class="avatar-badge" [class.badge-active]="!!currentUser?.foto">
+            {{ currentUser?.foto ? 'Con Foto' : 'Sin Foto' }}
+          </span>
+        </div>
+
+        <h3 class="profile-name">{{ currentUser?.nombre || currentUser?.usuario || 'Usuario Joel' }}</h3>
+        <p class="profile-role">
+          Rol: <strong>{{ currentUser?.rol || 'censista' }}</strong>
+          <span *ngIf="currentUser?.id"> • ID: #{{ currentUser?.id }}</span>
+        </p>
+      </div>
+
+      <div class="profile-details-grid">
+        <div class="profile-item">
+          <span class="item-label">Usuario</span>
+          <span class="item-val">{{ currentUser?.usuario || userId }}</span>
+        </div>
+        <div class="profile-item">
+          <span class="item-label">Email</span>
+          <span class="item-val">{{ currentUser?.email || 'joel@aplicacionesweb2026.com' }}</span>
+        </div>
+        <div class="profile-item">
+          <span class="item-label">Backend</span>
+          <span class="item-val">PostgreSQL (:3000)</span>
+        </div>
+      </div>
+
+      <!-- Acciones de Cámara / Galería con compresión -->
+      <div class="photo-upload-section">
+        <h4>Actualizar Foto de Perfil</h4>
+        <p class="photo-tip">
+          La imagen se comprime a <strong>máx 600 px (JPEG 70%)</strong> y se envía en byteArray a <code>POST /api/users/:id/foto</code>.
+        </p>
+
+        <div class="photo-buttons-grid">
+          <button
+            type="button"
+            class="hero-btn btn-photo-camera"
+            (click)="pickFromCamera()"
+            [disabled]="subiendoFoto">
+            <ion-icon name="camera-outline"></ion-icon>
+            <div class="btn-info">
+              <strong>Tomar Foto</strong>
+              <span>Cámara nativa</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="hero-btn btn-photo-gallery"
+            (click)="pickFromGallery()"
+            [disabled]="subiendoFoto">
+            <ion-icon name="image-outline"></ion-icon>
+            <div class="btn-info">
+              <strong>Galería</strong>
+              <span>Elegir imagen</span>
+            </div>
+          </button>
+        </div>
+
+        <div *ngIf="subiendoFoto" class="uploading-feedback">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <span>{{ perfilStatusMsg }}</span>
+        </div>
+
+        <div *ngIf="perfilStatusMsg && !subiendoFoto" class="status-feedback">
+          <span>{{ perfilStatusMsg }}</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <button
+          type="button"
+          class="btn-primary-action"
+          (click)="cambiarVista('biometria')">
           <ion-icon name="shield-checkmark-outline"></ion-icon>
-          <div class="btn-info">
-            <strong>Verificar con Liveness</strong>
-            <span>Validar identidad en tiempo real</span>
+          <span>Ir a Validación Facial (Liveness)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. VISTA: BIOMETRÍA Y FACE LIVENESS (AWS) -->
+    <!-- ========================================== -->
+    <ng-container *ngIf="vistaActual === 'biometria'">
+      <!-- Tarjeta de Identificación del Usuario -->
+      <div class="modern-card">
+        <div class="card-header-custom">
+          <ion-icon name="person-outline" class="card-title-icon"></ion-icon>
+          <div>
+            <h4>Identidad de Usuario</h4>
+            <span class="helper-text">Identificador sincronizado con PostgreSQL</span>
           </div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Módulo Secundario: Consultas de Estado -->
-    <div class="status-queries-container">
-      <button
-        type="button"
-        class="secondary-action-btn"
-        (click)="consultarEstado()"
-        [disabled]="!userId.trim() || cargando">
-        <ion-icon name="time-outline" class="icon-query"></ion-icon>
-        <span>Consultar Estado (AWS Lambda)</span>
-      </button>
-
-      <button
-        type="button"
-        class="secondary-action-btn btn-backend-http"
-        (click)="consultarEstadoBackend()"
-        [disabled]="!userId.trim() || cargando">
-        <ion-icon name="globe-outline" class="icon-query"></ion-icon>
-        <span>Consultar API Backend (:3000)</span>
-      </button>
-    </div>
-
-    <!-- Indicador de Carga -->
-    <div *ngIf="cargando" class="loading-card">
-      <ion-spinner name="crescent" color="primary" class="loading-spinner"></ion-spinner>
-      <div class="loading-text">
-        <strong>Comunicando con AWS</strong>
-        <span>{{ textoCarga }}</span>
-      </div>
-    </div>
-
-    <!-- Tarjeta de Resultados -->
-    <div *ngIf="resultado && !cargando" class="result-card" [ngClass]="'status-' + resultado.tipo">
-      <div class="result-header">
-        <div class="result-icon-box">
-          <ion-icon
-            [name]="resultado.tipo === 'success' ? 'checkmark-circle' : resultado.tipo === 'danger' ? 'alert-circle' : 'sparkles-outline'">
-          </ion-icon>
+          <span *ngIf="currentUser" class="session-active-pill">
+            Activo: {{ currentUser.usuario }}
+          </span>
         </div>
-        <div class="result-title-box">
-          <h3>{{ resultado.titulo }}</h3>
-          <span class="result-badge">{{ resultado.tipo | uppercase }}</span>
+        <div class="input-container">
+          <ion-input
+            label="ID de Usuario"
+            labelPlacement="floating"
+            fill="outline"
+            [(ngModel)]="userId"
+            placeholder="Ej: joel"
+            class="custom-input">
+          </ion-input>
         </div>
       </div>
 
-      <p class="result-body">{{ resultado.mensaje }}</p>
+      <!-- Módulo Principal: AWS Face Liveness -->
+      <div class="liveness-hero-card">
+        <div class="hero-header">
+          <div class="hero-badge">
+            <ion-icon name="finger-print-outline"></ion-icon>
+            <span>AWS REKOGNITION FACE LIVENESS</span>
+          </div>
+          <h3>Prueba de Vida en Vivo</h3>
+          <p>Verificación 3D contra spoofing, máscaras y fotos con detección de destellos lumínicos.</p>
+        </div>
 
-      <!-- Visor Técnico Desplegable -->
-      <div *ngIf="resultado.detalles" class="technical-details">
-        <button type="button" class="btn-toggle-json" (click)="mostrarDetalles = !mostrarDetalles">
-          <ion-icon [name]="mostrarDetalles ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
-          <span>{{ mostrarDetalles ? 'Ocultar datos técnicos' : 'Ver respuesta JSON completa' }}</span>
-        </button>
-        <pre *ngIf="mostrarDetalles" class="json-viewer">{{ resultado.detalles | json }}</pre>
+        <div class="hero-actions">
+          <button
+            type="button"
+            class="hero-btn btn-liveness-reg"
+            (click)="iniciarLiveness('registro')"
+            [disabled]="!userId.trim() || cargando">
+            <ion-icon name="videocam-outline"></ion-icon>
+            <div class="btn-info">
+              <strong>Registrar con Liveness</strong>
+              <span>Generar sesión y enrolar rostro</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="hero-btn btn-liveness-ver"
+            (click)="iniciarLiveness('verificacion')"
+            [disabled]="!userId.trim() || cargando">
+            <ion-icon name="shield-checkmark-outline"></ion-icon>
+            <div class="btn-info">
+              <strong>Verificar con Liveness</strong>
+              <span>Validar identidad en tiempo real</span>
+            </div>
+          </button>
+        </div>
       </div>
-    </div>
+
+      <!-- Módulo Secundario: Consultas de Estado -->
+      <div class="status-queries-container">
+        <button
+          type="button"
+          class="secondary-action-btn"
+          (click)="consultarEstado()"
+          [disabled]="!userId.trim() || cargando">
+          <ion-icon name="time-outline" class="icon-query"></ion-icon>
+          <span>Consultar Estado (AWS Lambda)</span>
+        </button>
+
+        <button
+          type="button"
+          class="secondary-action-btn btn-backend-http"
+          (click)="consultarEstadoBackend()"
+          [disabled]="!userId.trim() || cargando">
+          <ion-icon name="globe-outline" class="icon-query"></ion-icon>
+          <span>Consultar API Backend (:3000)</span>
+        </button>
+      </div>
+
+      <!-- Indicador de Carga -->
+      <div *ngIf="cargando" class="loading-card">
+        <ion-spinner name="crescent" color="primary" class="loading-spinner"></ion-spinner>
+        <div class="loading-text">
+          <strong>Comunicando con AWS</strong>
+          <span>{{ textoCarga }}</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Resultados -->
+      <div *ngIf="resultado && !cargando" class="result-card" [ngClass]="'status-' + resultado.tipo">
+        <div class="result-header">
+          <div class="result-icon-box">
+            <ion-icon
+              [name]="resultado.tipo === 'success' ? 'checkmark-circle' : resultado.tipo === 'danger' ? 'alert-circle' : 'sparkles-outline'">
+            </ion-icon>
+          </div>
+          <div class="result-title-box">
+            <h3>{{ resultado.titulo }}</h3>
+            <span class="result-badge">{{ resultado.tipo | uppercase }}</span>
+          </div>
+        </div>
+
+        <p class="result-body">{{ resultado.mensaje }}</p>
+
+        <!-- Visor Técnico Desplegable -->
+        <div *ngIf="resultado.detalles" class="technical-details">
+          <button type="button" class="btn-toggle-json" (click)="mostrarDetalles = !mostrarDetalles">
+            <ion-icon [name]="mostrarDetalles ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+            <span>{{ mostrarDetalles ? 'Ocultar datos técnicos' : 'Ver respuesta JSON completa' }}</span>
+          </button>
+          <pre *ngIf="mostrarDetalles" class="json-viewer">{{ resultado.detalles | json }}</pre>
+        </div>
+      </div>
+    </ng-container>
 
   </div>
 

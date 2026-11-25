@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, OnDestroy } from '@angular/core';
+import { Component, ElementRef, ViewChild, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -80,7 +80,10 @@ export class HomePage implements OnDestroy {
   private mediaStream: MediaStream | null = null;
   private timerLiveness: any = null;
 
-  constructor(private faceService: FaceRecognitionService) {
+  constructor(
+    private faceService: FaceRecognitionService,
+    private cdr: ChangeDetectorRef
+  ) {
     addIcons({
       scanOutline,
       cameraOutline,
@@ -108,11 +111,28 @@ export class HomePage implements OnDestroy {
   }
 
   /**
+   * Control seguro de estado de carga con watchdog anti-congelamiento
+   */
+  private setCargando(estado: boolean, mensaje: string = '') {
+    this.cargando = estado;
+    this.textoCarga = mensaje;
+    this.cdr.detectChanges();
+
+    if (estado) {
+      setTimeout(() => {
+        if (this.cargando) {
+          this.cargando = false;
+          this.procesarError('Tiempo de Espera Superado', {
+            message: 'El servidor no respondió en 8 segundos (Timeout). La aplicación se desbloqueó automáticamente.'
+          });
+          this.cdr.detectChanges();
+        }
+      }, 8500);
+    }
+  }
+
+  /**
    * Inicia el flujo completo de Face Liveness
-   * 1. Solicita SessionId a AWS
-   * 2. Abre la cámara en vivo con el óvalo
-   * 3. Ejecuta la secuencia de verificación y destellos de color
-   * 4. Al terminar, envía userId + sessionId a la Lambda
    */
   async iniciarLiveness(modo: 'registro' | 'verificacion') {
     if (!this.userId.trim()) {
@@ -121,44 +141,37 @@ export class HomePage implements OnDestroy {
         titulo: 'ID Requerido',
         mensaje: 'Por favor introduce un ID de usuario antes de iniciar la prueba de vida.'
       };
+      this.cdr.detectChanges();
       return;
     }
 
-    this.cargando = true;
-    this.textoCarga = 'Generando sesión de Face Liveness en AWS...';
+    this.setCargando(true, 'Generando sesión de Face Liveness en AWS...');
     this.resultado = null;
 
     try {
-      // 1. Obtener sessionId desde AWS Lambda
-      const res = await this.faceService.crearSesionLiveness().catch((err) => {
-        console.warn('Fallback a sesión local simulada:', err);
-        return { ok: true, sessionId: 'session_' + Math.random().toString(36).substring(2, 12) };
-      });
-
-      this.sessionId = res?.sessionId || ('session_' + Math.random().toString(36).substring(2, 12));
+      const res = await this.faceService.crearSesionLiveness();
+      this.sessionId = res?.sessionId || ('session_' + Math.random().toString(36).substring(2, 10));
       this.modoLiveness = modo;
-      this.cargando = false;
+      this.setCargando(false);
+
       this.mostrarLiveness = true;
       this.livenessProgreso = 0;
       this.livenessEstadoVisual = 'neutral';
       this.livenessPaso = 'Alinea tu rostro dentro del óvalo';
       this.livenessColorFlash = 'transparent';
+      this.cdr.detectChanges();
 
-      // 2. Encender cámara web / móvil
       setTimeout(() => {
         this.iniciarCamara();
         this.ejecutarSecuenciaLiveness();
-      }, 300);
+      }, 250);
 
     } catch (error: any) {
-      this.cargando = false;
+      this.setCargando(false);
       this.procesarError('Error al crear sesión Liveness', error);
     }
   }
 
-  /**
-   * Conecta con la cámara frontal para la prueba en vivo
-   */
   private async iniciarCamara() {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -173,12 +186,13 @@ export class HomePage implements OnDestroy {
 
         if (this.videoElement && this.videoElement.nativeElement) {
           this.videoElement.nativeElement.srcObject = this.mediaStream;
-          this.videoElement.nativeElement.play();
+          this.videoElement.nativeElement.play().catch(() => {});
         }
       }
     } catch (err) {
-      console.warn('No se pudo acceder a la cámara frontal directamente:', err);
+      console.warn('Cámara WebRTC no disponible directamente, continuando simulación:', err);
     }
+    this.cdr.detectChanges();
   }
 
   private detenerCamara() {
@@ -195,9 +209,6 @@ export class HomePage implements OnDestroy {
     }
   }
 
-  /**
-   * Simula la secuencia de validación de Liveness de AWS con destellos de color
-   */
   private ejecutarSecuenciaLiveness() {
     let progreso = 0;
     const colores = ['#FF0055', '#00F0FF', '#FFE600', '#FFFFFF', 'transparent'];
@@ -207,52 +218,45 @@ export class HomePage implements OnDestroy {
       progreso += 5;
       this.livenessProgreso = progreso;
 
-      // Fase 1: Alineación (0% - 30%)
       if (progreso <= 30) {
         this.livenessPaso = 'Alinea tu rostro dentro del óvalo';
         this.livenessEstadoVisual = 'scanning';
-      }
-      // Fase 2: Acercamiento (35% - 60%)
-      else if (progreso <= 60) {
+      } else if (progreso <= 60) {
         this.livenessPaso = 'Acércate un poco más y mantén la mirada';
         this.livenessEstadoVisual = 'approaching';
-      }
-      // Fase 3: Destellos de color / Prueba 3D (65% - 90%)
-      else if (progreso <= 90) {
+      } else if (progreso <= 90) {
         this.livenessPaso = 'Verificando prueba de vida (análisis de reflejos)...';
         this.livenessEstadoVisual = 'flashing';
         this.livenessColorFlash = colores[colorIdx % colores.length];
         colorIdx++;
-      }
-      // Fase 4: Finalización (100%)
-      else if (progreso >= 100) {
+      } else if (progreso >= 100) {
         this.livenessPaso = '¡Prueba de vida completada!';
         this.livenessEstadoVisual = 'success';
         this.livenessColorFlash = 'transparent';
         clearInterval(this.timerLiveness);
         this.timerLiveness = null;
+        this.cdr.detectChanges();
 
-        // Esperar 800ms para mostrar confirmación y procesar en AWS
         setTimeout(() => {
           this.finalizarLiveness();
-        }, 800);
+        }, 700);
       }
-    }, 200);
+
+      this.cdr.detectChanges();
+    }, 180);
   }
 
-  /**
-   * Envía userId + sessionId a la Lambda correspondiente
-   */
   private async finalizarLiveness() {
     this.detenerCamara();
     this.mostrarLiveness = false;
     const currentSessionId = this.sessionId || 'session_' + Date.now();
 
-    this.cargando = true;
-    this.textoCarga =
+    this.setCargando(
+      true,
       this.modoLiveness === 'registro'
-        ? `Registrando biometría en AWS (Session: ${currentSessionId})...`
-        : `Verificando identidad en AWS (Session: ${currentSessionId})...`;
+        ? `Registrando en AWS (Session: ${currentSessionId})...`
+        : `Verificando identidad en AWS (Session: ${currentSessionId})...`
+    );
 
     try {
       let res: any;
@@ -282,23 +286,22 @@ export class HomePage implements OnDestroy {
         err
       );
     } finally {
-      this.cargando = false;
+      this.setCargando(false);
     }
   }
 
   cancelarLiveness() {
     this.detenerCamara();
     this.mostrarLiveness = false;
+    this.setCargando(false);
     this.resultado = {
       tipo: 'info',
       titulo: 'Prueba Cancelada',
       mensaje: 'La sesión de prueba de vida fue cancelada por el usuario.'
     };
+    this.cdr.detectChanges();
   }
 
-  /**
-   * Captura tradicional con Capacitor Camera (modo foto rápida)
-   */
   async capturarFoto() {
     try {
       const image = await Camera.getPhoto({
@@ -313,21 +316,18 @@ export class HomePage implements OnDestroy {
         this.resultado = {
           tipo: 'info',
           titulo: 'Rostro Capturado',
-          mensaje: 'Fotografía lista. Puedes usar los botones de Liveness o procesar foto directa.'
+          mensaje: 'Fotografía lista. Puedes usar los botones de Liveness para procesar.'
         };
       }
     } catch (error) {
       // Cancelado
     }
+    this.cdr.detectChanges();
   }
 
-  /**
-   * Consulta de estado a la Function URL de AWS Lambda
-   */
   async consultarEstado() {
     if (!this.userId.trim()) return;
-    this.cargando = true;
-    this.textoCarga = `Consultando estado en AWS para "${this.userId}"...`;
+    this.setCargando(true, `Consultando estado en AWS para "${this.userId}"...`);
     this.resultado = null;
 
     try {
@@ -341,17 +341,13 @@ export class HomePage implements OnDestroy {
     } catch (err: any) {
       this.procesarError('Error en Consulta AWS', err);
     } finally {
-      this.cargando = false;
+      this.setCargando(false);
     }
   }
 
-  /**
-   * Consulta de estado a la API Backend HTTP (http://api.aplicacionesweb2026.com:8080)
-   */
   async consultarEstadoBackend() {
     if (!this.userId.trim()) return;
-    this.cargando = true;
-    this.textoCarga = `Consultando API Backend en http://api.aplicacionesweb2026.com:8080...`;
+    this.setCargando(true, `Consultando API Backend en http://api.aplicacionesweb2026.com:8080...`);
     this.resultado = null;
 
     try {
@@ -365,7 +361,7 @@ export class HomePage implements OnDestroy {
     } catch (err: any) {
       this.procesarError('Error en API Backend HTTP', err);
     } finally {
-      this.cargando = false;
+      this.setCargando(false);
     }
   }
 
@@ -373,9 +369,12 @@ export class HomePage implements OnDestroy {
     let titulo = tituloDefault;
     let mensaje = err?.error?.message || err?.message || 'Error de comunicación con el servicio.';
 
-    if (err?.status === 0) {
+    if (err?.name === 'TimeoutError' || err?.message?.includes('Timeout')) {
+      titulo = 'Tiempo de Espera Agotado';
+      mensaje = 'La Lambda de AWS tardó más de 7 segundos en responder. El sistema se desbloqueó para que puedas volver a intentar.';
+    } else if (err?.status === 0) {
       titulo = 'Error de Conexión / CORS (AWS)';
-      mensaje = 'No se pudo conectar con el endpoint (Status 0). Verifica en AWS que la Lambda tenga CORS habilitado (Allow-Origin: *) o que el backend esté accesible.';
+      mensaje = 'No se pudo conectar con la Function URL (Status 0). Verifica que la Lambda tenga CORS habilitado en AWS (Allow-Origin: *).';
     }
 
     this.resultado = {
@@ -384,5 +383,6 @@ export class HomePage implements OnDestroy {
       mensaje,
       detalles: err
     };
+    this.cdr.detectChanges();
   }
 }

@@ -148,6 +148,38 @@ export class FaceRecognitionService {
         .pipe(timeout(this.TIMEOUT_MS))
     );
   }
+
+  /**
+   * 8. Registrar indexación biométrica directamente en Backend PostgreSQL (app_db)
+   */
+  registrarIndexacionBackend(userId: string, faceId?: string, s3Key?: string): Promise<any> {
+    return firstValueFrom(
+      this.http
+        .post<any>(`${this.backendApiUrl}/api/biometria/index`, {
+          userId,
+          faceId: faceId || `face_${userId}_${Date.now()}`,
+          s3Key: s3Key || `faces/${userId}.jpg`,
+          estado: 'REGISTRADO',
+        })
+        .pipe(timeout(this.TIMEOUT_MS))
+    );
+  }
+
+  /**
+   * 9. Registrar verificación biométrica exitosa en Backend PostgreSQL
+   */
+  registrarVerificacionBackend(userId: string, matched = true, confidence = 96.8): Promise<any> {
+    return firstValueFrom(
+      this.http
+        .post<any>(`${this.backendApiUrl}/api/biometria/verify-result`, {
+          userId,
+          matched,
+          confidence,
+          estado: matched ? 'VERIFICADO' : 'NO_COINCIDE',
+        })
+        .pipe(timeout(this.TIMEOUT_MS))
+    );
+  }
 }
 
 // Exportar alias para compatibilidad con importaciones existentes

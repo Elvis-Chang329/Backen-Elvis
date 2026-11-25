@@ -396,7 +396,7 @@
         </div>
       </div>
 
-      <!-- Módulo Secundario: Consultas de Estado -->
+      <!-- Módulo Secundario: Consultas y Acciones de Base de Datos -->
       <div class="status-queries-container">
         <button
           type="button"
@@ -413,7 +413,25 @@
           (click)="consultarEstadoBackend()"
           [disabled]="!userId.trim() || cargando">
           <ion-icon name="globe-outline" class="icon-query"></ion-icon>
-          <span>Consultar API Backend (:3000)</span>
+          <span>Consultar Estado en PostgreSQL (:3000)</span>
+        </button>
+
+        <button
+          type="button"
+          class="secondary-action-btn btn-enrolar-db"
+          (click)="enrolarEnBackend()"
+          [disabled]="!userId.trim() || cargando">
+          <ion-icon name="finger-print-outline" class="icon-query"></ion-icon>
+          <span>Enrolar Rostro en PostgreSQL (REGISTRADO)</span>
+        </button>
+
+        <button
+          type="button"
+          class="secondary-action-btn btn-verificar-db"
+          (click)="simularVerificacionBackend()"
+          [disabled]="!userId.trim() || cargando">
+          <ion-icon name="shield-checkmark-outline" class="icon-query"></ion-icon>
+          <span>Verificar Rostro en PostgreSQL (VERIFICADO)</span>
         </button>
       </div>
 

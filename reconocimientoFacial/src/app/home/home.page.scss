@@ -330,6 +330,14 @@
     color: #a855f7;
   }
 
+  &.btn-enrolar-db .icon-query {
+    color: #06b6d4;
+  }
+
+  &.btn-verificar-db .icon-query {
+    color: #10b981;
+  }
+
   &:hover:not(:disabled) {
     background: rgba(51, 65, 85, 0.8);
     border-color: rgba(56, 189, 248, 0.3);

@@ -1,0 +1,67 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Registro con Foto Facial</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <!-- Sección de Fotografía -->
+  <div class="ion-text-center ion-margin-bottom" style="text-align: center; margin-bottom: 20px;">
+    <ion-avatar style="width: 130px; height: 130px; margin: 0 auto; border: 3px solid var(--ion-color-primary, #38bdf8); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+      <img [src]="fotoPreview || 'assets/icon/favicon.png'" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover;" />
+    </ion-avatar>
+
+    <ion-button fill="outline" size="small" class="ion-margin-top" (click)="tomarFoto()" style="margin-top: 14px;">
+      <ion-icon slot="start" name="camera-outline"></ion-icon>
+      {{ fotoPreview ? 'Cambiar Foto' : 'Tomar Foto Facial' }}
+    </ion-button>
+  </div>
+
+  <!-- Formulario de Datos -->
+  <ion-list>
+    <ion-item>
+      <ion-label position="stacked">Nombre</ion-label>
+      <ion-input [(ngModel)]="usuario.nombre" placeholder="Ingresa el nombre"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Apellido</ion-label>
+      <ion-input [(ngModel)]="usuario.apellido" placeholder="Ingresa el apellido"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Usuario</ion-label>
+      <ion-input [(ngModel)]="usuario.usuario" placeholder="Nombre de usuario"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Email</ion-label>
+      <ion-input type="email" [(ngModel)]="usuario.email" placeholder="correo@ejemplo.com"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Contraseña</ion-label>
+      <ion-input type="password" [(ngModel)]="usuario.contrasena" placeholder="******"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Teléfono</ion-label>
+      <ion-input type="tel" [(ngModel)]="usuario.telefono" placeholder="55551234"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Fecha de Nacimiento</ion-label>
+      <ion-input type="date" [(ngModel)]="usuario.fechaNacimiento"></ion-input>
+    </ion-item>
+  </ion-list>
+
+  <ion-button expand="block" color="success" class="ion-margin-top" (click)="guardar()" style="margin-top: 20px;">
+    <ion-icon slot="start" name="save-outline"></ion-icon>
+    Guardar en Backend
+  </ion-button>
+
+</ion-content>

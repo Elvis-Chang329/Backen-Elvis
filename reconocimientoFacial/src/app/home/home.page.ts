@@ -271,8 +271,8 @@ export class HomePage implements OnDestroy {
           tipo: match ? 'success' : 'warning',
           titulo: match ? 'Verificación Aprobada' : 'Verificación Fallida',
           mensaje: match
-            ? `Identidad confirmada para "${this.userId}". Confianza Liveness: ${res?.confidence ? res.confidence + '%' : 'Alta'}.`
-            : `El rostro verificado no coincide con el registro previo de "${this.userId}".`,
+            ? `Identidad confirmada contra la colección "rostros-proyecto-final" para "${this.userId}". Confianza Liveness: ${res?.confidence ? res.confidence + '%' : 'Alta'}.`
+            : `El rostro verificado no coincide en la colección "rostros-proyecto-final" con el registro previo de "${this.userId}".`,
           detalles: res
         };
       }

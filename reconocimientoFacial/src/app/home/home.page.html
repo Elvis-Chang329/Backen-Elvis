@@ -1,52 +1,159 @@
-<ion-header [translucent]="true">
-  <ion-toolbar color="primary">
-    <ion-title>Reconocimiento Facial</ion-title>
+<ion-header [translucent]="true" class="ion-no-border header-custom">
+  <ion-toolbar class="toolbar-custom">
+    <div class="header-content">
+      <div class="header-title-box">
+        <ion-icon name="scan-outline" class="header-icon"></ion-icon>
+        <div>
+          <h1 class="app-title">BioAuth</h1>
+          <p class="app-subtitle">Reconocimiento Facial AWS</p>
+        </div>
+      </div>
+      <ion-chip class="cloud-chip">
+        <ion-icon name="cloud-done-outline" color="success"></ion-icon>
+        <ion-label>AWS Cloud</ion-label>
+      </ion-chip>
+    </div>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Identificación de Usuario</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-input label="ID de Usuario" labelPlacement="floating" [(ngModel)]="userId" placeholder="Ej. usr_001"></ion-input>
-      </ion-item>
+<ion-content [fullscreen]="true" class="main-content">
+  <div class="content-wrapper">
 
-      <ion-button expand="block" (click)="capturarFoto()" class="ion-margin-top">
-        Capturar Rostro
-      </ion-button>
+    <!-- Tarjeta del Visor Biométrico -->
+    <div class="camera-card">
+      <div class="scanner-frame" [class.has-photo]="fotoBase64" (click)="!fotoBase64 ? capturarFoto() : null">
+        <!-- Retículas en las esquinas -->
+        <span class="corner top-left"></span>
+        <span class="corner top-right"></span>
+        <span class="corner bottom-left"></span>
+        <span class="corner bottom-right"></span>
 
-      <div *ngIf="fotoBase64" class="ion-text-center ion-margin-top">
-        <img [src]="'data:image/jpeg;base64,' + fotoBase64" alt="Rostro capturado" style="max-height: 250px; border-radius: 12px; object-fit: cover;" />
+        <!-- Contenido si NO hay foto -->
+        <div *ngIf="!fotoBase64" class="empty-state">
+          <div class="icon-pulse">
+            <ion-icon name="camera-outline" class="scanner-center-icon"></ion-icon>
+          </div>
+          <h3>Captura Biométrica</h3>
+          <p>Toca aquí para encuadrar tu rostro</p>
+          <ion-button size="small" class="btn-scan" (click)="capturarFoto()">
+            <ion-icon slot="start" name="scan-outline"></ion-icon>
+            Abrir Cámara
+          </ion-button>
+        </div>
+
+        <!-- Contenido si HAY foto -->
+        <div *ngIf="fotoBase64" class="photo-state">
+          <img [src]="'data:image/jpeg;base64,' + fotoBase64" alt="Rostro capturado" class="captured-image" />
+          <div class="scan-laser"></div>
+          <div class="photo-overlay">
+            <ion-badge color="success" class="badge-ready">
+              <ion-icon name="checkmark-circle"></ion-icon> Rostro Capturado
+            </ion-badge>
+            <ion-button fill="clear" size="small" class="btn-retake" (click)="capturarFoto()">
+              <ion-icon slot="start" name="refresh-outline"></ion-icon>
+              Repetir Foto
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Identidad -->
+    <div class="modern-card">
+      <div class="card-header-custom">
+        <ion-icon name="person-outline" class="card-title-icon"></ion-icon>
+        <div>
+          <h4>Identificación</h4>
+          <span class="helper-text">Introduce el identificador único del usuario</span>
+        </div>
+      </div>
+      <div class="input-container">
+        <ion-input
+          label="ID de Usuario"
+          labelPlacement="floating"
+          fill="outline"
+          [(ngModel)]="userId"
+          placeholder="Ej: usr_001"
+          class="custom-input">
+        </ion-input>
+      </div>
+    </div>
+
+    <!-- Botones de Acción Biométricos -->
+    <div class="actions-container">
+      <div class="action-grid">
+        <button
+          type="button"
+          class="action-btn btn-register"
+          (click)="registrar()"
+          [disabled]="!fotoBase64 || !userId.trim() || cargando">
+          <ion-icon name="person-add-outline" class="btn-icon"></ion-icon>
+          <div class="btn-text">
+            <strong>Registrar</strong>
+            <span>Enrolar en AWS</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="action-btn btn-verify"
+          (click)="verificar()"
+          [disabled]="!fotoBase64 || !userId.trim() || cargando">
+          <ion-icon name="shield-checkmark-outline" class="btn-icon"></ion-icon>
+          <div class="btn-text">
+            <strong>Verificar</strong>
+            <span>Comparar 1:1</span>
+          </div>
+        </button>
       </div>
 
-      <div class="ion-margin-top">
-        <ion-button expand="block" color="success" (click)="registrar()" [disabled]="!fotoBase64 || cargando">
-          Registrar Rostro
-        </ion-button>
-        <ion-button expand="block" color="tertiary" (click)="verificar()" [disabled]="!fotoBase64 || cargando">
-          Verificar Rostro
-        </ion-button>
-        <ion-button expand="block" fill="outline" (click)="consultarEstado()" [disabled]="cargando">
-          Consultar Estado
-        </ion-button>
+      <button
+        type="button"
+        class="action-btn btn-status"
+        (click)="consultarEstado()"
+        [disabled]="!userId.trim() || cargando">
+        <ion-icon name="time-outline" class="btn-icon"></ion-icon>
+        <div class="btn-text">
+          <strong>Consultar Estado</strong>
+          <span>Historial biométrico de {{ userId || 'usuario' }}</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Indicador de Carga -->
+    <div *ngIf="cargando" class="loading-card">
+      <ion-spinner name="crescent" color="primary" class="loading-spinner"></ion-spinner>
+      <div class="loading-text">
+        <strong>Procesando Biometría</strong>
+        <span>{{ textoCarga }}</span>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Resultados -->
+    <div *ngIf="resultado && !cargando" class="result-card" [ngClass]="'status-' + resultado.tipo">
+      <div class="result-header">
+        <div class="result-icon-box">
+          <ion-icon
+            [name]="resultado.tipo === 'success' ? 'checkmark-circle' : resultado.tipo === 'danger' ? 'alert-circle' : 'sparkles-outline'">
+          </ion-icon>
+        </div>
+        <div class="result-title-box">
+          <h3>{{ resultado.titulo }}</h3>
+          <span class="result-badge">{{ resultado.tipo | uppercase }}</span>
+        </div>
       </div>
 
-      <div *ngIf="cargando" class="ion-text-center ion-margin-top">
-        <ion-spinner name="crescent"></ion-spinner>
-        <p>Procesando con AWS...</p>
-      </div>
-    </ion-card-content>
-  </ion-card>
+      <p class="result-body">{{ resultado.mensaje }}</p>
 
-  <ion-card *ngIf="mensajeResultado">
-    <ion-card-header>
-      <ion-card-title>Resultado</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <p style="white-space: pre-wrap;">{{ mensajeResultado }}</p>
-    </ion-card-content>
-  </ion-card>
+      <!-- Visor Técnico Desplegable -->
+      <div *ngIf="resultado.detalles" class="technical-details">
+        <button type="button" class="btn-toggle-json" (click)="mostrarDetalles = !mostrarDetalles">
+          <ion-icon [name]="mostrarDetalles ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+          <span>{{ mostrarDetalles ? 'Ocultar datos técnicos' : 'Ver respuesta completa de AWS' }}</span>
+        </button>
+        <pre *ngIf="mostrarDetalles" class="json-viewer">{{ resultado.detalles | json }}</pre>
+      </div>
+    </div>
+
+  </div>
 </ion-content>

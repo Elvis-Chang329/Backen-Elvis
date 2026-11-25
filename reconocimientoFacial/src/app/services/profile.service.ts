@@ -43,7 +43,22 @@ export class ProfileService {
     if (!data) {
       throw new Error('No se encontraron datos del usuario');
     }
+    // Normalizar la foto para que siempre sea renderizable directamente en <img>
+    if (data.foto && typeof data.foto === 'string') {
+      const trimmed = data.foto.trim();
+      if (!trimmed.startsWith('data:') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        data.foto = `data:image/jpeg;base64,${trimmed}`;
+      }
+    }
     return data;
+  }
+
+  /**
+   * Obtiene la URL directa del binario de la foto
+   */
+  getRawPhotoUrl(identifier: string | number): string {
+    const cleanId = encodeURIComponent(String(identifier).trim());
+    return `${this.baseUrl}/api/users/${cleanId}/foto/raw`;
   }
 
   /**

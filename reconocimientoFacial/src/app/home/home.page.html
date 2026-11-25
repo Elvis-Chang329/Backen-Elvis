@@ -1,43 +1,48 @@
 <ion-header [translucent]="true" class="ion-no-border header-custom">
   <ion-toolbar class="toolbar-custom">
-    <div class="header-content">
-      <div class="header-title-box">
-        <ion-icon name="shield-checkmark-outline" class="header-icon"></ion-icon>
+    <!-- Fila 1: Logo, Título y Estado -->
+    <div class="header-brand-row">
+      <div class="brand-title-box">
+        <ion-icon name="shield-checkmark-outline" class="brand-icon"></ion-icon>
         <div>
           <h1 class="app-title">BioAuth</h1>
-          <p class="app-subtitle">Face Liveness & Perfiles</p>
+          <p class="app-subtitle">Face Liveness &amp; Perfiles</p>
         </div>
       </div>
-
-      <!-- Barra de Navegación de Vistas (Sin Login) -->
-      <div class="nav-pills">
-        <button
-          type="button"
-          class="nav-pill-btn"
-          [class.active]="vistaActual === 'biometria'"
-          (click)="cambiarVista('biometria')">
-          <ion-icon name="finger-print-outline"></ion-icon>
-          <span>Liveness</span>
-        </button>
-
-        <button
-          type="button"
-          class="nav-pill-btn"
-          [class.active]="vistaActual === 'perfil'"
-          (click)="cambiarVista('perfil')">
-          <ion-icon name="person-outline"></ion-icon>
-          <span>Mi Perfil</span>
-        </button>
-
-        <button
-          type="button"
-          class="nav-pill-btn btn-crear-pill"
-          [class.active]="vistaActual === 'crear'"
-          (click)="cambiarVista('crear')">
-          <ion-icon name="add-circle-outline"></ion-icon>
-          <span>Crear</span>
-        </button>
+      <div class="connection-status-pill">
+        <span class="status-dot"></span>
+        <span>Online</span>
       </div>
+    </div>
+
+    <!-- Fila 2: Barra de Navegación Segmentada (3 Botones Ordenados y Centrados) -->
+    <div class="nav-segment-bar">
+      <button
+        type="button"
+        class="nav-tab-btn"
+        [class.active]="vistaActual === 'biometria'"
+        (click)="cambiarVista('biometria')">
+        <ion-icon name="finger-print-outline"></ion-icon>
+        <span>Liveness</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-tab-btn"
+        [class.active]="vistaActual === 'perfil'"
+        (click)="cambiarVista('perfil')">
+        <ion-icon name="person-outline"></ion-icon>
+        <span>Mi Perfil</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-tab-btn btn-crear-tab"
+        [class.active]="vistaActual === 'crear'"
+        (click)="cambiarVista('crear')">
+        <ion-icon name="person-add-outline"></ion-icon>
+        <span>Crear Perfil</span>
+      </button>
     </div>
   </ion-toolbar>
 </ion-header>
@@ -89,15 +94,16 @@
             <img
               *ngIf="perfilData.foto"
               [src]="perfilData.foto"
-              alt="Foto de perfil"
-              class="profile-img" />
+              alt="Perfil"
+              class="profile-img"
+              (error)="onFotoError()" />
             <div *ngIf="!perfilData.foto" class="profile-img-placeholder">
               <ion-icon name="person-outline"></ion-icon>
             </div>
-            <span class="avatar-badge" [class.badge-active]="!!perfilData.foto">
-              {{ perfilData.foto ? 'Foto Activa' : 'Sin Foto' }}
-            </span>
           </div>
+          <span class="avatar-badge" [class.badge-active]="!!perfilData.foto">
+            {{ perfilData.foto ? 'Foto Activa' : 'Sin Foto' }}
+          </span>
 
           <h3 class="profile-name">{{ perfilData.nombre }} {{ perfilData.apellido }}</h3>
           <p class="profile-username">@{{ perfilData.usuario }}</p>

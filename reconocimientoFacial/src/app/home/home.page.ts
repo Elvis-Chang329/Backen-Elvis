@@ -171,6 +171,25 @@ export class HomePage implements OnInit, OnDestroy {
   // ==========================================
   // MÉTODOS DE PERFIL (CONSULTA Y ACTUALIZAR FOTO)
   // ==========================================
+  formatFoto(foto: string | null | undefined): string | null {
+    if (!foto) return null;
+    const trimmed = String(foto).trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return `data:image/jpeg;base64,${trimmed}`;
+  }
+
+  onFotoError() {
+    const targetId = this.perfilData?.usuario || this.perfilData?.id || this.userId;
+    if (targetId && this.perfilData) {
+      // Fallback al endpoint HTTP raw con cache busting
+      this.perfilData.foto = `${this.profileService.getRawPhotoUrl(targetId)}?t=${Date.now()}`;
+      this.cdr.detectChanges();
+    }
+  }
+
   async cargarPerfil(idABuscar?: string) {
     const id = (idABuscar || this.perfilIdInput || this.userId).trim();
     if (!id) return;
@@ -182,6 +201,9 @@ export class HomePage implements OnInit, OnDestroy {
       this.cdr.detectChanges();
 
       const user = await this.profileService.getUser(id);
+      if (user.foto) {
+        user.foto = this.formatFoto(user.foto);
+      }
       this.perfilData = user;
       this.perfilIdInput = user.usuario || String(user.id || '');
       this.userId = user.usuario || String(user.id || '');
@@ -222,7 +244,7 @@ export class HomePage implements OnInit, OnDestroy {
       const savedPhoto = await this.profileService.uploadUserPhoto(targetId, compressed);
 
       if (this.perfilData) {
-        this.perfilData = { ...this.perfilData, foto: savedPhoto };
+        this.perfilData = { ...this.perfilData, foto: this.formatFoto(savedPhoto) || compressed };
       }
       this.perfilMsg = '✅ Foto actualizada correctamente en la base de datos PostgreSQL.';
     } catch (err: any) {

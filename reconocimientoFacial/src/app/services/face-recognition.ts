@@ -7,10 +7,9 @@ import { Observable } from 'rxjs';
 })
 export class FaceRecognition {
     // Reemplaza estas 3 cadenas con las Function URLs de tus Lambdas en AWS
-    private readonly urlRegistro = 'https://TU-LAMBDA-1.lambda-url.us-east-1.on.aws/';
-    private readonly urlVerificacion = 'https://TU-LAMBDA-2.lambda-url.us-east-1.on.aws/';
-    private readonly urlEstado = 'https://TU-LAMBDA-3.lambda-url.us-east-1.on.aws/';
-
+    private readonly urlRegistro = 'https://mfu55zgo4p25nm3jvw4gnz2pti0foier.lambda-url.us-east-1.on.aws/';
+    private readonly urlVerificacion = 'https://sqryezg45q77s377tja62lkis40meqtf.lambda-url.us-east-1.on.aws/';
+    private readonly urlEstado = 'https://5chbngaiyxbdgwka72os6nneoa0pslmx.lambda-url.us-east-1.on.aws/';
     constructor(private http: HttpClient) { }
 
     // Lambda 1: Registrar rostro del usuario

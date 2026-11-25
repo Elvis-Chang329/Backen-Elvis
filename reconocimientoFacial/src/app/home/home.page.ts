@@ -31,14 +31,17 @@ import {
   globeOutline,
   videocamOutline,
   fingerPrintOutline,
-  logInOutline,
-  logOutOutline,
   imageOutline,
-  personCircleOutline
+  addCircleOutline,
+  saveOutline,
+  checkmarkCircleOutline,
+  mailOutline,
+  calendarOutline,
+  callOutline
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { FaceRecognitionService } from '../services/face-recognition';
-import { AuthProfileService, UserData } from '../services/auth-profile.service';
+import { ProfileService, UserProfile } from '../services/profile.service';
 
 interface BiometriaResultado {
   tipo: 'success' | 'danger' | 'warning' | 'info';
@@ -67,21 +70,36 @@ interface BiometriaResultado {
 export class HomePage implements OnInit, OnDestroy {
   @ViewChild('videoElement') videoElement?: ElementRef<HTMLVideoElement>;
 
-  // Vista activa: 'biometria' | 'perfil' | 'login'
-  vistaActual: 'biometria' | 'perfil' | 'login' = 'biometria';
+  // Pestañas / Vistas: 'biometria' | 'perfil' | 'crear' (Sin Login)
+  vistaActual: 'biometria' | 'perfil' | 'crear' = 'biometria';
 
-  // Sesión y Usuario
-  currentUser: UserData | null = null;
-  loginUsuario: string = 'joel';
-  loginPass: string = '123456';
-  loginError: string = '';
-  loginCargando: boolean = false;
+  // 1. Estado de "Mi Perfil"
+  perfilIdInput: string = 'joel';
+  perfilData: UserProfile | null = null;
+  perfilCargando: boolean = false;
+  perfilError: string = '';
+  perfilMsg: string = '';
+  subiendoFotoPerfil: boolean = false;
 
-  // Estado Perfil y Foto
-  perfilStatusMsg: string = '';
-  subiendoFoto: boolean = false;
+  // 2. Estado de "Crear Perfil"
+  nuevoUsuario: UserProfile = {
+    nombre: '',
+    apellido: '',
+    usuario: '',
+    email: '',
+    contrasena: '123456',
+    edad: 25,
+    fechaNacimiento: '2000-01-01',
+    telefono: '',
+    rol: 'censista',
+    foto: null,
+  };
+  crearFotoPreview: string | null = null;
+  crearCargando: boolean = false;
+  crearError: string = '';
+  crearMsg: string = '';
 
-  // Biometría
+  // 3. Estado de "Biometría Face Liveness"
   userId: string = 'joel';
   fotoBase64: string | null = null;
   cargando: boolean = false;
@@ -102,7 +120,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   constructor(
     private faceService: FaceRecognitionService,
-    private authProfile: AuthProfileService,
+    private profileService: ProfileService,
     private cdr: ChangeDetectorRef
   ) {
     addIcons({
@@ -124,119 +142,160 @@ export class HomePage implements OnInit, OnDestroy {
       globeOutline,
       videocamOutline,
       fingerPrintOutline,
-      logInOutline,
-      logOutOutline,
       imageOutline,
-      personCircleOutline
+      addCircleOutline,
+      saveOutline,
+      checkmarkCircleOutline,
+      mailOutline,
+      calendarOutline,
+      callOutline
     });
   }
 
   ngOnInit() {
-    this.currentUser = this.authProfile.getCurrentUser();
-    if (this.currentUser) {
-      this.userId = this.currentUser.usuario || String(this.currentUser.id);
-    }
+    // Cargar perfil por defecto 'joel' al arrancar
+    this.cargarPerfil('joel');
   }
 
-  cambiarVista(nuevaVista: 'biometria' | 'perfil' | 'login') {
-    this.vistaActual = nuevaVista;
+  cambiarVista(vista: 'biometria' | 'perfil' | 'crear') {
+    this.vistaActual = vista;
     this.resultado = null;
-    this.perfilStatusMsg = '';
-    this.loginError = '';
+    this.perfilMsg = '';
+    this.crearMsg = '';
+    if (vista === 'perfil' && !this.perfilData) {
+      this.cargarPerfil(this.userId || 'joel');
+    }
     this.cdr.detectChanges();
   }
 
-  /**
-   * Flujo de Login contra el Backend (POST /api/auth/login en puerto 3000)
-   */
-  async ejecutarLogin() {
-    if (!this.loginUsuario.trim() || !this.loginPass.trim()) {
-      this.loginError = 'Por favor ingresa usuario y contraseña.';
-      return;
-    }
+  // ==========================================
+  // MÉTODOS DE PERFIL (CONSULTA Y ACTUALIZAR FOTO)
+  // ==========================================
+  async cargarPerfil(idABuscar?: string) {
+    const id = (idABuscar || this.perfilIdInput || this.userId).trim();
+    if (!id) return;
 
     try {
-      this.loginCargando = true;
-      this.loginError = '';
+      this.perfilCargando = true;
+      this.perfilError = '';
+      this.perfilMsg = '';
       this.cdr.detectChanges();
 
-      const user = await this.authProfile.login(this.loginUsuario.trim(), this.loginPass.trim());
-      this.currentUser = user;
-      this.userId = user.usuario || String(user.id);
-      this.vistaActual = 'biometria';
-      this.resultado = {
-        tipo: 'success',
-        titulo: 'Sesión Iniciada',
-        mensaje: `¡Bienvenido ${user.nombre || user.usuario}! Sesión vinculada con PostgreSQL.`
-      };
+      const user = await this.profileService.getUser(id);
+      this.perfilData = user;
+      this.perfilIdInput = user.usuario || String(user.id || '');
+      this.userId = user.usuario || String(user.id || '');
+      this.perfilMsg = `Perfil de "${user.nombre} ${user.apellido}" cargado desde PostgreSQL.`;
     } catch (err: any) {
-      this.loginError = err?.message || 'Error al conectar con el servidor de autenticación.';
+      this.perfilError = err?.message || `No se pudo encontrar el usuario "${id}" en el backend.`;
     } finally {
-      this.loginCargando = false;
+      this.perfilCargando = false;
       this.cdr.detectChanges();
     }
   }
 
-  logout() {
-    this.authProfile.logout();
-    this.currentUser = null;
-    this.vistaActual = 'login';
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * Flujo de Perfil: Cámara o Galería con compresión a 600px / 0.7 JPEG
-   */
-  async pickFromCamera() {
-    await this.captureAndUpload(CameraSource.Camera);
-  }
-
-  async pickFromGallery() {
-    await this.captureAndUpload(CameraSource.Photos);
-  }
-
-  private async captureAndUpload(source: CameraSource) {
-    const targetUserId = this.currentUser?.id || this.userId || '1';
+  async capturarFotoPerfil(source: 'camera' | 'photos') {
+    const targetSource = source === 'camera' ? CameraSource.Camera : CameraSource.Photos;
+    const targetId = this.perfilData?.usuario || this.perfilData?.id || this.userId || 'joel';
 
     try {
-      this.subiendoFoto = true;
-      this.perfilStatusMsg = 'Abriendo cámara/galería...';
+      this.subiendoFotoPerfil = true;
+      this.perfilMsg = 'Abriendo cámara o galería...';
       this.cdr.detectChanges();
 
       const photo = await Camera.getPhoto({
-        source,
+        source: targetSource,
         resultType: CameraResultType.DataUrl,
         width: 600,
         quality: 70,
         allowEditing: false,
       });
 
-      if (!photo.dataUrl) {
-        throw new Error('No se obtuvo imagen desde el dispositivo');
-      }
+      if (!photo.dataUrl) throw new Error('No se obtuvo imagen');
 
-      this.perfilStatusMsg = 'Comprimiendo imagen a 600px (calidad 70%)...';
+      this.perfilMsg = 'Comprimiendo imagen a 600px (calidad 70%)...';
       this.cdr.detectChanges();
+      const compressed = await this.profileService.compressDataUrl(photo.dataUrl, 600, 0.7);
 
-      const compressed = await this.authProfile.compressDataUrl(photo.dataUrl, 600, 0.7);
-
-      this.perfilStatusMsg = 'Enviando foto a PostgreSQL (POST /api/users/:id/foto)...';
+      this.perfilMsg = 'Guardando foto en PostgreSQL (POST /api/users/:id/foto)...';
       this.cdr.detectChanges();
+      const savedPhoto = await this.profileService.uploadUserPhoto(targetId, compressed);
 
-      const savedUrlOrBase64 = await this.authProfile.uploadUserPhoto(targetUserId, compressed);
-
-      if (this.currentUser) {
-        this.currentUser = { ...this.currentUser, foto: savedUrlOrBase64 };
+      if (this.perfilData) {
+        this.perfilData = { ...this.perfilData, foto: savedPhoto };
       }
-      this.perfilStatusMsg = '✅ Foto subida y guardada exitosamente en el backend.';
+      this.perfilMsg = '✅ Foto actualizada correctamente en la base de datos PostgreSQL.';
     } catch (err: any) {
       if (err?.message !== 'User cancelled photos app') {
-        this.perfilStatusMsg = err?.message || 'Error al seleccionar o subir la foto';
-      } else {
-        this.perfilStatusMsg = '';
+        this.perfilError = err?.message || 'Error al actualizar la foto';
       }
     } finally {
-      this.subiendoFoto = false;
+      this.subiendoFotoPerfil = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  usarUsuarioEnBiometria() {
+    if (this.perfilData?.usuario) {
+      this.userId = this.perfilData.usuario;
+    }
+    this.cambiarVista('biometria');
+  }
+
+  // ==========================================
+  // MÉTODOS DE CREAR PERFIL (FORM + CAPTURA DE FOTO)
+  // ==========================================
+  async capturarFotoNuevoUsuario(source: 'camera' | 'photos') {
+    const targetSource = source === 'camera' ? CameraSource.Camera : CameraSource.Photos;
+
+    try {
+      const photo = await Camera.getPhoto({
+        source: targetSource,
+        resultType: CameraResultType.DataUrl,
+        width: 600,
+        quality: 70,
+        allowEditing: false,
+      });
+
+      if (!photo.dataUrl) throw new Error('No se obtuvo imagen');
+
+      const compressed = await this.profileService.compressDataUrl(photo.dataUrl, 600, 0.7);
+      this.crearFotoPreview = compressed;
+      this.nuevoUsuario.foto = compressed;
+      this.cdr.detectChanges();
+    } catch (err: any) {
+      // Cancelado
+    }
+  }
+
+  async guardarNuevoPerfil() {
+    if (!this.nuevoUsuario.nombre.trim() || !this.nuevoUsuario.apellido.trim() || !this.nuevoUsuario.usuario.trim() || !this.nuevoUsuario.email.trim()) {
+      this.crearError = 'Por favor completa al menos Nombre, Apellido, Usuario y Email.';
+      return;
+    }
+
+    try {
+      this.crearCargando = true;
+      this.crearError = '';
+      this.crearMsg = '';
+      this.cdr.detectChanges();
+
+      const creado = await this.profileService.createUser(this.nuevoUsuario);
+      this.perfilData = creado;
+      this.userId = creado.usuario || this.nuevoUsuario.usuario;
+      this.perfilIdInput = this.userId;
+
+      this.crearMsg = `¡Usuario "${creado.usuario || this.nuevoUsuario.usuario}" creado exitosamente en PostgreSQL!`;
+
+      // Limpiar formulario y cambiar a vista de Perfil
+      setTimeout(() => {
+        this.cambiarVista('perfil');
+      }, 1200);
+
+    } catch (err: any) {
+      this.crearError = err?.message || 'Error al guardar el nuevo usuario en el backend.';
+    } finally {
+      this.crearCargando = false;
       this.cdr.detectChanges();
     }
   }

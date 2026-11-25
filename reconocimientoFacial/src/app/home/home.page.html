@@ -5,11 +5,11 @@
         <ion-icon name="shield-checkmark-outline" class="header-icon"></ion-icon>
         <div>
           <h1 class="app-title">BioAuth</h1>
-          <p class="app-subtitle">Face Liveness & Backend</p>
+          <p class="app-subtitle">Face Liveness & Perfiles</p>
         </div>
       </div>
 
-      <!-- Barra de Navegación de Vistas -->
+      <!-- Barra de Navegación de Vistas (Sin Login) -->
       <div class="nav-pills">
         <button
           type="button"
@@ -26,26 +26,16 @@
           [class.active]="vistaActual === 'perfil'"
           (click)="cambiarVista('perfil')">
           <ion-icon name="person-outline"></ion-icon>
-          <span>Perfil</span>
+          <span>Mi Perfil</span>
         </button>
 
         <button
-          *ngIf="!currentUser"
           type="button"
-          class="nav-pill-btn btn-login-pill"
-          [class.active]="vistaActual === 'login'"
-          (click)="cambiarVista('login')">
-          <ion-icon name="log-in-outline"></ion-icon>
-          <span>Login</span>
-        </button>
-
-        <button
-          *ngIf="currentUser"
-          type="button"
-          class="nav-pill-btn btn-logout-pill"
-          (click)="logout()">
-          <ion-icon name="log-out-outline"></ion-icon>
-          <span>Salir</span>
+          class="nav-pill-btn btn-crear-pill"
+          [class.active]="vistaActual === 'crear'"
+          (click)="cambiarVista('crear')">
+          <ion-icon name="add-circle-outline"></ion-icon>
+          <span>Crear</span>
         </button>
       </div>
     </div>
@@ -56,156 +46,283 @@
   <div class="content-wrapper">
 
     <!-- ========================================== -->
-    <!-- 1. VISTA: INICIAR SESIÓN (POST /api/auth/login) -->
+    <!-- 1. VISTA: MI PERFIL (CARGAR Y ACTUALIZAR FOTO) -->
     <!-- ========================================== -->
-    <div *ngIf="vistaActual === 'login'" class="modern-card auth-card">
-      <div class="auth-header">
-        <div class="auth-avatar-circle">
-          <ion-icon name="person-circle-outline"></ion-icon>
+    <div *ngIf="vistaActual === 'perfil'" class="profile-view-wrapper">
+      <!-- Buscador rápido de Perfil -->
+      <div class="search-user-box">
+        <div class="input-container flex-1">
+          <ion-input
+            label="Buscar Usuario en PostgreSQL"
+            labelPlacement="floating"
+            fill="outline"
+            [(ngModel)]="perfilIdInput"
+            placeholder="Ej: joel"
+            class="custom-input">
+          </ion-input>
         </div>
-        <h2>Iniciar Sesión</h2>
-        <p class="auth-subtitle">Conexión con PostgreSQL en <code>api.aplicacionesweb2026.com:3000</code></p>
+        <button
+          type="button"
+          class="btn-search-profile"
+          (click)="cargarPerfil()"
+          [disabled]="perfilCargando">
+          <ion-spinner *ngIf="perfilCargando" name="crescent"></ion-spinner>
+          <ion-icon *ngIf="!perfilCargando" name="refresh-outline"></ion-icon>
+          <span>{{ perfilCargando ? 'Cargando...' : 'Cargar' }}</span>
+        </button>
       </div>
 
-      <div *ngIf="loginError" class="auth-error-banner">
+      <div *ngIf="perfilError" class="auth-error-banner">
         <ion-icon name="alert-circle"></ion-icon>
-        <span>{{ loginError }}</span>
+        <span>{{ perfilError }}</span>
       </div>
 
-      <div class="input-container">
-        <ion-input
-          label="Usuario o Email"
-          labelPlacement="floating"
-          fill="outline"
-          [(ngModel)]="loginUsuario"
-          placeholder="Ej: joel"
-          class="custom-input">
-        </ion-input>
+      <div *ngIf="perfilMsg" class="status-feedback-banner">
+        <ion-icon name="checkmark-circle-outline"></ion-icon>
+        <span>{{ perfilMsg }}</span>
       </div>
 
-      <div class="input-container" style="margin-top: 14px;">
-        <ion-input
-          label="Contraseña"
-          labelPlacement="floating"
-          type="password"
-          fill="outline"
-          [(ngModel)]="loginPass"
-          placeholder="Introduce tu contraseña"
-          class="custom-input">
-        </ion-input>
-      </div>
+      <!-- Tarjeta del Perfil -->
+      <div *ngIf="perfilData" class="modern-card profile-card">
+        <div class="profile-hero">
+          <div class="profile-avatar-wrapper">
+            <img
+              *ngIf="perfilData.foto"
+              [src]="perfilData.foto"
+              alt="Foto de perfil"
+              class="profile-img" />
+            <div *ngIf="!perfilData.foto" class="profile-img-placeholder">
+              <ion-icon name="person-outline"></ion-icon>
+            </div>
+            <span class="avatar-badge" [class.badge-active]="!!perfilData.foto">
+              {{ perfilData.foto ? 'Foto Activa' : 'Sin Foto' }}
+            </span>
+          </div>
 
-      <div class="auth-actions">
+          <h3 class="profile-name">{{ perfilData.nombre }} {{ perfilData.apellido }}</h3>
+          <p class="profile-username">@{{ perfilData.usuario }}</p>
+          <div class="profile-tags">
+            <span class="tag-badge tag-role">{{ perfilData.rol || 'censista' }}</span>
+            <span class="tag-badge tag-bio">{{ perfilData.estado_biometria || 'NO_REGISTRADO' }}</span>
+          </div>
+        </div>
+
+        <!-- Detalles de la tabla 'usuarios' -->
+        <div class="profile-fields-list">
+          <div class="field-row">
+            <div class="field-icon-box"><ion-icon name="mail-outline"></ion-icon></div>
+            <div class="field-content">
+              <span class="field-label">Email</span>
+              <strong class="field-val">{{ perfilData.email || 'No registrado' }}</strong>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-icon-box"><ion-icon name="call-outline"></ion-icon></div>
+            <div class="field-content">
+              <span class="field-label">Teléfono</span>
+              <strong class="field-val">{{ perfilData.telefono || 'No registrado' }}</strong>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-icon-box"><ion-icon name="calendar-outline"></ion-icon></div>
+            <div class="field-content">
+              <span class="field-label">Edad / Fecha Nacimiento</span>
+              <strong class="field-val">{{ perfilData.edad }} años ({{ perfilData.fechaNacimiento }})</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección: Actualizar Foto con Cámara o Galería -->
+        <div class="photo-action-section">
+          <h4>Actualizar Foto de Perfil</h4>
+          <p class="photo-hint">
+            Se comprime a <strong>600 px (calidad 70%)</strong> y se guarda directamente en PostgreSQL.
+          </p>
+
+          <div class="photo-buttons-row">
+            <button
+              type="button"
+              class="photo-btn btn-cam"
+              (click)="capturarFotoPerfil('camera')"
+              [disabled]="subiendoFotoPerfil">
+              <ion-icon name="camera-outline"></ion-icon>
+              <span>Tomar Foto</span>
+            </button>
+
+            <button
+              type="button"
+              class="photo-btn btn-gal"
+              (click)="capturarFotoPerfil('photos')"
+              [disabled]="subiendoFotoPerfil">
+              <ion-icon name="image-outline"></ion-icon>
+              <span>Galería</span>
+            </button>
+          </div>
+
+          <div *ngIf="subiendoFotoPerfil" class="uploading-indicator">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+            <span>Procesando y guardando foto en backend...</span>
+          </div>
+        </div>
+
         <button
           type="button"
           class="btn-primary-action"
-          (click)="ejecutarLogin()"
-          [disabled]="loginCargando">
-          <ion-spinner *ngIf="loginCargando" name="crescent"></ion-spinner>
-          <ion-icon *ngIf="!loginCargando" name="log-in-outline"></ion-icon>
-          <span>{{ loginCargando ? 'Iniciando sesión...' : 'Entrar al Sistema' }}</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn-text-action"
-          (click)="cambiarVista('biometria')">
-          <span>Omitir e ir directo a Validación Facial</span>
+          style="margin-top: 16px;"
+          (click)="usarUsuarioEnBiometria()">
+          <ion-icon name="finger-print-outline"></ion-icon>
+          <span>Validar este Usuario con Face Liveness</span>
         </button>
       </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- 2. VISTA: PERFIL Y FOTO DE USUARIO -->
+    <!-- 2. VISTA: CREAR PERFIL (TABLA USUARIOS) -->
     <!-- ========================================== -->
-    <div *ngIf="vistaActual === 'perfil'" class="modern-card profile-card">
-      <div class="profile-hero">
-        <div class="profile-avatar-wrapper">
-          <img
-            *ngIf="currentUser?.foto"
-            [src]="currentUser?.foto"
-            alt="Foto de perfil"
-            class="profile-img" />
-          <div *ngIf="!currentUser?.foto" class="profile-img-placeholder">
-            <ion-icon name="person-outline"></ion-icon>
+    <div *ngIf="vistaActual === 'crear'" class="create-view-wrapper">
+      <div class="modern-card create-card">
+        <div class="create-card-header">
+          <div class="create-avatar-box">
+            <img *ngIf="crearFotoPreview" [src]="crearFotoPreview" class="create-avatar-img" />
+            <ion-icon *ngIf="!crearFotoPreview" name="person-add-outline" class="placeholder-icon"></ion-icon>
           </div>
-          <span class="avatar-badge" [class.badge-active]="!!currentUser?.foto">
-            {{ currentUser?.foto ? 'Con Foto' : 'Sin Foto' }}
-          </span>
+          <div>
+            <h3>Crear Nuevo Perfil</h3>
+            <span class="helper-text">Registra usuario y foto en PostgreSQL (`usuarios`)</span>
+          </div>
         </div>
 
-        <h3 class="profile-name">{{ currentUser?.nombre || currentUser?.usuario || 'Usuario Joel' }}</h3>
-        <p class="profile-role">
-          Rol: <strong>{{ currentUser?.rol || 'censista' }}</strong>
-          <span *ngIf="currentUser?.id"> • ID: #{{ currentUser?.id }}</span>
-        </p>
-      </div>
-
-      <div class="profile-details-grid">
-        <div class="profile-item">
-          <span class="item-label">Usuario</span>
-          <span class="item-val">{{ currentUser?.usuario || userId }}</span>
+        <!-- Captura de Foto para el Nuevo Perfil -->
+        <div class="create-photo-bar">
+          <span class="photo-bar-label">Foto del Usuario:</span>
+          <div class="photo-buttons-compact">
+            <button type="button" class="compact-photo-btn" (click)="capturarFotoNuevoUsuario('camera')">
+              <ion-icon name="camera-outline"></ion-icon>
+              <span>Cámara</span>
+            </button>
+            <button type="button" class="compact-photo-btn" (click)="capturarFotoNuevoUsuario('photos')">
+              <ion-icon name="image-outline"></ion-icon>
+              <span>Galería</span>
+            </button>
+          </div>
         </div>
-        <div class="profile-item">
-          <span class="item-label">Email</span>
-          <span class="item-val">{{ currentUser?.email || 'joel@aplicacionesweb2026.com' }}</span>
-        </div>
-        <div class="profile-item">
-          <span class="item-label">Backend</span>
-          <span class="item-val">PostgreSQL (:3000)</span>
-        </div>
-      </div>
 
-      <!-- Acciones de Cámara / Galería con compresión -->
-      <div class="photo-upload-section">
-        <h4>Actualizar Foto de Perfil</h4>
-        <p class="photo-tip">
-          La imagen se comprime a <strong>máx 600 px (JPEG 70%)</strong> y se envía en byteArray a <code>POST /api/users/:id/foto</code>.
-        </p>
+        <div *ngIf="crearError" class="auth-error-banner" style="margin-top: 12px;">
+          <ion-icon name="alert-circle"></ion-icon>
+          <span>{{ crearError }}</span>
+        </div>
 
-        <div class="photo-buttons-grid">
-          <button
-            type="button"
-            class="hero-btn btn-photo-camera"
-            (click)="pickFromCamera()"
-            [disabled]="subiendoFoto">
-            <ion-icon name="camera-outline"></ion-icon>
-            <div class="btn-info">
-              <strong>Tomar Foto</strong>
-              <span>Cámara nativa</span>
+        <div *ngIf="crearMsg" class="status-feedback-banner" style="margin-top: 12px;">
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+          <span>{{ crearMsg }}</span>
+        </div>
+
+        <!-- Campos del Formulario de la tabla usuarios -->
+        <div class="form-grid" style="margin-top: 16px;">
+          <div class="input-container">
+            <ion-input
+              label="Nombre *"
+              labelPlacement="floating"
+              fill="outline"
+              [(ngModel)]="nuevoUsuario.nombre"
+              placeholder="Ej: Elvis"
+              class="custom-input">
+            </ion-input>
+          </div>
+
+          <div class="input-container">
+            <ion-input
+              label="Apellido *"
+              labelPlacement="floating"
+              fill="outline"
+              [(ngModel)]="nuevoUsuario.apellido"
+              placeholder="Ej: Chang"
+              class="custom-input">
+            </ion-input>
+          </div>
+
+          <div class="input-container">
+            <ion-input
+              label="Usuario (ID único) *"
+              labelPlacement="floating"
+              fill="outline"
+              [(ngModel)]="nuevoUsuario.usuario"
+              placeholder="Ej: elvis"
+              class="custom-input">
+            </ion-input>
+          </div>
+
+          <div class="input-container">
+            <ion-input
+              label="Email *"
+              labelPlacement="floating"
+              type="email"
+              fill="outline"
+              [(ngModel)]="nuevoUsuario.email"
+              placeholder="Ej: elvis@correo.com"
+              class="custom-input">
+            </ion-input>
+          </div>
+
+          <div class="input-container">
+            <ion-input
+              label="Contraseña"
+              labelPlacement="floating"
+              type="password"
+              fill="outline"
+              [(ngModel)]="nuevoUsuario.contrasena"
+              placeholder="Default: 123456"
+              class="custom-input">
+            </ion-input>
+          </div>
+
+          <div class="input-container">
+            <ion-input
+              label="Teléfono"
+              labelPlacement="floating"
+              fill="outline"
+              [(ngModel)]="nuevoUsuario.telefono"
+              placeholder="Ej: 555-1234"
+              class="custom-input">
+            </ion-input>
+          </div>
+
+          <div class="form-row-2col">
+            <div class="input-container">
+              <ion-input
+                label="Edad"
+                labelPlacement="floating"
+                type="number"
+                fill="outline"
+                [(ngModel)]="nuevoUsuario.edad"
+                class="custom-input">
+              </ion-input>
             </div>
-          </button>
 
-          <button
-            type="button"
-            class="hero-btn btn-photo-gallery"
-            (click)="pickFromGallery()"
-            [disabled]="subiendoFoto">
-            <ion-icon name="image-outline"></ion-icon>
-            <div class="btn-info">
-              <strong>Galería</strong>
-              <span>Elegir imagen</span>
+            <div class="input-container">
+              <ion-input
+                label="Fecha Nacimiento"
+                labelPlacement="floating"
+                type="date"
+                fill="outline"
+                [(ngModel)]="nuevoUsuario.fechaNacimiento"
+                class="custom-input">
+              </ion-input>
             </div>
-          </button>
+          </div>
         </div>
 
-        <div *ngIf="subiendoFoto" class="uploading-feedback">
-          <ion-spinner name="crescent" color="primary"></ion-spinner>
-          <span>{{ perfilStatusMsg }}</span>
-        </div>
-
-        <div *ngIf="perfilStatusMsg && !subiendoFoto" class="status-feedback">
-          <span>{{ perfilStatusMsg }}</span>
-        </div>
-      </div>
-
-      <div style="margin-top: 20px;">
         <button
           type="button"
           class="btn-primary-action"
-          (click)="cambiarVista('biometria')">
-          <ion-icon name="shield-checkmark-outline"></ion-icon>
-          <span>Ir a Validación Facial (Liveness)</span>
+          style="margin-top: 20px;"
+          (click)="guardarNuevoPerfil()"
+          [disabled]="crearCargando">
+          <ion-spinner *ngIf="crearCargando" name="crescent"></ion-spinner>
+          <ion-icon *ngIf="!crearCargando" name="save-outline"></ion-icon>
+          <span>{{ crearCargando ? 'Guardando en PostgreSQL...' : 'Guardar Perfil' }}</span>
         </button>
       </div>
     </div>
@@ -220,11 +337,8 @@
           <ion-icon name="person-outline" class="card-title-icon"></ion-icon>
           <div>
             <h4>Identidad de Usuario</h4>
-            <span class="helper-text">Identificador sincronizado con PostgreSQL</span>
+            <span class="helper-text">Introduce tu identificador para la prueba biométrica</span>
           </div>
-          <span *ngIf="currentUser" class="session-active-pill">
-            Activo: {{ currentUser.usuario }}
-          </span>
         </div>
         <div class="input-container">
           <ion-input

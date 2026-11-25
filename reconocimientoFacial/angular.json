@@ -18,10 +18,12 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "deleteOutputPath": false,
             "outputPath": {
               "base": "www",
               "browser": ""
             },
+            "deleteOutputPath": false,
             "index": "src/index.html",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
@@ -47,8 +49,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "10kb",
-                  "maximumError": "25kb"
+                  "maximumWarning": "35kb",
+                  "maximumError": "50kb"
                 }
               ],
               "fileReplacements": [

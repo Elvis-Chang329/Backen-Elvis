@@ -123,11 +123,11 @@ export class HomePage implements OnDestroy {
         if (this.cargando) {
           this.cargando = false;
           this.procesarError('Tiempo de Espera Superado', {
-            message: 'El servidor no respondió en 8 segundos (Timeout). La aplicación se desbloqueó automáticamente.'
+            message: 'El servidor AWS superó los 30 segundos de espera (Cold Start / Latencia de red). La aplicación se desbloqueó automáticamente.'
           });
           this.cdr.detectChanges();
         }
-      }, 8500);
+      }, 32000);
     }
   }
 

@@ -18,8 +18,8 @@ export class FaceRecognitionService {
   // API Backend HTTP
   private readonly backendApiUrl = 'http://api.aplicacionesweb2026.com:8080';
 
-  // Timeout para evitar que la app se congele (7 segundos máximo)
-  private readonly TIMEOUT_MS = 7000;
+  // Timeout para invocaciones AWS Lambda incluyendo cold starts (30 segundos)
+  private readonly TIMEOUT_MS = 30000;
 
   constructor(private http: HttpClient) {}
 

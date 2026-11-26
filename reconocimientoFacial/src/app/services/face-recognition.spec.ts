@@ -25,6 +25,19 @@ describe('FaceRecognition', () => {
     expect(service).toBeTruthy();
   });
 
+  it('creates verification liveness sessions through the backend', async () => {
+    const result = service.crearSesionLivenessParaVerificacion();
+
+    const request = httpTestingController.expectOne(
+      'http://api.aplicacionesweb2026.com:3000/api/liveness/create-session'
+    );
+    expect(request.request.method).toBe('POST');
+    request.flush({ sessionId: 'session-123' });
+
+    await expect(result).resolves.toEqual({ ok: true, sessionId: 'session-123' });
+    httpTestingController.verify();
+  });
+
   it('verifies liveness against the profile photo stored by the backend', async () => {
     const response = { ok: true, matched: true, livenessOk: true, similarity: 98 };
     const result = service.verificarConLiveness('joel', 'session-123');

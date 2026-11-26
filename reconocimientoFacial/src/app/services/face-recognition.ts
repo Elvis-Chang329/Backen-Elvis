@@ -43,6 +43,27 @@ export class FaceRecognitionService {
   }
 
   /**
+   * Crear la sesión de verificación con el mismo backend que recupera sus resultados
+   */
+  async crearSesionLivenessParaVerificacion(): Promise<{ ok: boolean; sessionId: string }> {
+    const response = await firstValueFrom(
+      this.http
+        .post<{ sessionId?: string; SessionId?: string }>(
+          `${this.backendApiUrl}/api/liveness/create-session`,
+          {}
+        )
+        .pipe(timeout(this.TIMEOUT_MS))
+    );
+
+    const sessionId = response?.sessionId || response?.SessionId;
+    if (!sessionId) {
+      throw new Error('El backend no devolvió un ID válido para la sesión de Face Liveness.');
+    }
+
+    return { ok: true, sessionId };
+  }
+
+  /**
    * 2. Registrar usuario utilizando el Session ID de Face Liveness
    */
   registrarConLiveness(userId: string, sessionId: string): Promise<any> {

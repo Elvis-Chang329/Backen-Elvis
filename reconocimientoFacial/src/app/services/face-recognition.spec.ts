@@ -1,11 +1,13 @@
-import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { FaceRecognition } from './face-recognition';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+
+import { FaceRecognition } from './face-recognition';
 
 describe('FaceRecognition', () => {
   let service: FaceRecognition;
+  let httpTestingController: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -16,9 +18,25 @@ describe('FaceRecognition', () => {
       ],
     });
     service = TestBed.inject(FaceRecognition);
+    httpTestingController = TestBed.inject(HttpTestingController);
   });
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  it('verifies liveness against the profile photo stored by the backend', async () => {
+    const response = { ok: true, matched: true, livenessOk: true, similarity: 98 };
+    const result = service.verificarConLiveness('joel', 'session-123');
+
+    const request = httpTestingController.expectOne(
+      'http://api.aplicacionesweb2026.com:3000/api/liveness/verify'
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ userId: 'joel', sessionId: 'session-123' });
+    request.flush(response);
+
+    await expect(result).resolves.toEqual(response);
+    httpTestingController.verify();
   });
 });

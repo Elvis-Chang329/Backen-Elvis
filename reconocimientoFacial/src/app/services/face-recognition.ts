@@ -27,21 +27,19 @@ export class FaceRecognitionService {
    * 1. Crear sesión de Face Liveness en AWS
    */
   async crearSesionLiveness(): Promise<{ ok: boolean; sessionId: string }> {
-    try {
-      return await firstValueFrom(
-        this.http
-          .post<{ ok: boolean; sessionId: string }>(this.registroUrl, {
-            action: 'create_session',
-          })
-          .pipe(timeout(this.TIMEOUT_MS))
-      );
-    } catch (err) {
-      console.warn('Lambda create_session timeout o CORS, usando sesión local:', err);
-      return {
-        ok: true,
-        sessionId: 'session_' + Math.random().toString(36).substring(2, 10),
-      };
+    const response = await firstValueFrom(
+      this.http
+        .post<{ ok: boolean; sessionId: string }>(this.registroUrl, {
+          action: 'create_session',
+        })
+        .pipe(timeout(this.TIMEOUT_MS))
+    );
+
+    if (!response?.ok || !response.sessionId) {
+      throw new Error('AWS no devolvió un ID válido para la sesión de Face Liveness.');
     }
+
+    return response;
   }
 
   /**
@@ -65,8 +63,7 @@ export class FaceRecognitionService {
   verificarConLiveness(userId: string, sessionId: string): Promise<any> {
     return firstValueFrom(
       this.http
-        .post<any>(this.verificarUrl, {
-          action: 'verify_liveness',
+        .post<any>(`${this.backendApiUrl}/api/liveness/verify`, {
           userId,
           sessionId,
         })
@@ -168,13 +165,13 @@ export class FaceRecognitionService {
   /**
    * 9. Registrar verificación biométrica exitosa en Backend PostgreSQL
    */
-  registrarVerificacionBackend(userId: string, matched = true, confidence = 96.8): Promise<any> {
+  registrarVerificacionBackend(userId: string, matched = true, confidence?: number): Promise<any> {
     return firstValueFrom(
       this.http
         .post<any>(`${this.backendApiUrl}/api/biometria/verify-result`, {
           userId,
           matched,
-          confidence,
+          ...(confidence !== undefined ? { confidence } : {}),
           estado: matched ? 'VERIFICADO' : 'NO_COINCIDE',
         })
         .pipe(timeout(this.TIMEOUT_MS))

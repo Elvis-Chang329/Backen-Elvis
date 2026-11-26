@@ -1,15 +1,15 @@
-import { Component, ElementRef, ViewChild, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, ViewChild } from '@angular/core';
+import type { ElementRef, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import {
   IonHeader,
   IonToolbar,
   IonContent,
   IonInput,
   IonSpinner,
-  IonIcon,
-  IonChip,
-  IonLabel
+  IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -39,9 +39,11 @@ import {
   calendarOutline,
   callOutline
 } from 'ionicons/icons';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+
+import { configureFaceLiveness, mountFaceLivenessWidget } from '../services/face-liveness-widget';
 import { FaceRecognitionService } from '../services/face-recognition';
-import { ProfileService, UserProfile } from '../services/profile.service';
+import { ProfileService } from '../services/profile.service';
+import type { UserProfile } from '../services/profile.service';
 
 interface BiometriaResultado {
   tipo: 'success' | 'danger' | 'warning' | 'info';
@@ -62,13 +64,11 @@ interface BiometriaResultado {
     IonContent,
     IonInput,
     IonSpinner,
-    IonIcon,
-    IonChip,
-    IonLabel
+    IonIcon
   ],
 })
 export class HomePage implements OnInit, OnDestroy {
-  @ViewChild('videoElement') videoElement?: ElementRef<HTMLVideoElement>;
+  @ViewChild('livenessMount') livenessMount?: ElementRef<HTMLDivElement>;
 
   // Pestañas / Vistas: 'biometria' | 'perfil' | 'crear' (Sin Login)
   vistaActual: 'biometria' | 'perfil' | 'crear' = 'biometria';
@@ -111,12 +111,8 @@ export class HomePage implements OnInit, OnDestroy {
   mostrarLiveness: boolean = false;
   modoLiveness: 'registro' | 'verificacion' = 'registro';
   sessionId: string | null = null;
-  livenessPaso: string = 'Alinea tu rostro dentro del óvalo';
-  livenessProgreso: number = 0;
-  livenessColorFlash: string = 'transparent';
-  livenessEstadoVisual: string = 'neutral';
-  private mediaStream: MediaStream | null = null;
-  private timerLiveness: any = null;
+  private desmontarWidgetLiveness: (() => void) | null = null;
+  private livenessFinalizando = false;
 
   constructor(
     private faceService: FaceRecognitionService,
@@ -323,7 +319,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.detenerCamara();
+    this.limpiarWidgetLiveness();
   }
 
   /**
@@ -350,7 +346,7 @@ export class HomePage implements OnInit, OnDestroy {
   /**
    * Inicia el flujo completo de Face Liveness
    */
-  async iniciarLiveness(modo: 'registro' | 'verificacion') {
+  async iniciarLiveness(modo: 'registro' | 'verificacion'): Promise<void> {
     if (!this.userId.trim()) {
       this.resultado = {
         tipo: 'warning',
@@ -361,158 +357,142 @@ export class HomePage implements OnInit, OnDestroy {
       return;
     }
 
-    this.setCargando(true, 'Generando sesión de Face Liveness en AWS...');
     this.resultado = null;
+    this.mostrarDetalles = false;
+    this.livenessFinalizando = false;
 
     try {
+      configureFaceLiveness();
+      this.setCargando(true, 'Generando sesión de Face Liveness en AWS...');
       const res = await this.faceService.crearSesionLiveness();
-      this.sessionId = res?.sessionId || ('session_' + Math.random().toString(36).substring(2, 10));
+      this.sessionId = res.sessionId;
       this.modoLiveness = modo;
       this.setCargando(false);
 
       this.mostrarLiveness = true;
-      this.livenessProgreso = 0;
-      this.livenessEstadoVisual = 'neutral';
-      this.livenessPaso = 'Alinea tu rostro dentro del óvalo';
-      this.livenessColorFlash = 'transparent';
       this.cdr.detectChanges();
 
-      setTimeout(() => {
-        this.iniciarCamara();
-        this.ejecutarSecuenciaLiveness();
-      }, 250);
+      setTimeout(() => this.montarWidgetLiveness(), 0);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.setCargando(false);
-      this.procesarError('Error al crear sesión Liveness', error);
+      this.procesarError('No se pudo iniciar Face Liveness', error);
     }
   }
 
-  private async iniciarCamara() {
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        this.mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'user',
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          },
-          audio: false
-        });
+  private montarWidgetLiveness(): void {
+    const host = this.livenessMount?.nativeElement;
+    const sessionId = this.sessionId;
 
-        if (this.videoElement && this.videoElement.nativeElement) {
-          this.videoElement.nativeElement.srcObject = this.mediaStream;
-          this.videoElement.nativeElement.play().catch(() => {});
-        }
-      }
-    } catch (err) {
-      console.warn('Cámara WebRTC no disponible directamente, continuando simulación:', err);
+    if (!host || !sessionId) {
+      this.manejarErrorLiveness(new Error('No se pudo preparar el componente de Face Liveness.'));
+      return;
     }
+
+    try {
+      this.desmontarWidgetLiveness = mountFaceLivenessWidget(host, sessionId, {
+        onAnalysisComplete: () => this.finalizarLiveness(),
+        onError: (error) => this.manejarErrorLiveness(error),
+        onUserCancel: () => this.cancelarLiveness(),
+      });
+    } catch (error) {
+      this.manejarErrorLiveness(error);
+    }
+  }
+
+  private limpiarWidgetLiveness(): void {
+    this.desmontarWidgetLiveness?.();
+    this.desmontarWidgetLiveness = null;
+  }
+
+  private manejarErrorLiveness(error: unknown): void {
+    this.limpiarWidgetLiveness();
+    this.mostrarLiveness = false;
+    this.sessionId = null;
+    this.livenessFinalizando = false;
+    this.setCargando(false);
+    this.procesarError('Error en prueba de vida', error);
     this.cdr.detectChanges();
   }
 
-  private detenerCamara() {
-    if (this.timerLiveness) {
-      clearInterval(this.timerLiveness);
-      this.timerLiveness = null;
+  private async finalizarLiveness(): Promise<void> {
+    if (this.livenessFinalizando) {
+      return;
     }
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((track) => track.stop());
-      this.mediaStream = null;
-    }
-    if (this.videoElement && this.videoElement.nativeElement) {
-      this.videoElement.nativeElement.srcObject = null;
-    }
-  }
 
-  private ejecutarSecuenciaLiveness() {
-    let progreso = 0;
-    const colores = ['#FF0055', '#00F0FF', '#FFE600', '#FFFFFF', 'transparent'];
-    let colorIdx = 0;
-
-    this.timerLiveness = setInterval(() => {
-      progreso += 5;
-      this.livenessProgreso = progreso;
-
-      if (progreso <= 30) {
-        this.livenessPaso = 'Alinea tu rostro dentro del óvalo';
-        this.livenessEstadoVisual = 'scanning';
-      } else if (progreso <= 60) {
-        this.livenessPaso = 'Acércate un poco más y mantén la mirada';
-        this.livenessEstadoVisual = 'approaching';
-      } else if (progreso <= 90) {
-        this.livenessPaso = 'Verificando prueba de vida (análisis de reflejos)...';
-        this.livenessEstadoVisual = 'flashing';
-        this.livenessColorFlash = colores[colorIdx % colores.length];
-        colorIdx++;
-      } else if (progreso >= 100) {
-        this.livenessPaso = '¡Prueba de vida completada!';
-        this.livenessEstadoVisual = 'success';
-        this.livenessColorFlash = 'transparent';
-        clearInterval(this.timerLiveness);
-        this.timerLiveness = null;
-        this.cdr.detectChanges();
-
-        setTimeout(() => {
-          this.finalizarLiveness();
-        }, 700);
-      }
-
-      this.cdr.detectChanges();
-    }, 180);
-  }
-
-  private async finalizarLiveness() {
-    this.detenerCamara();
+    this.livenessFinalizando = true;
+    this.limpiarWidgetLiveness();
     this.mostrarLiveness = false;
-    const currentSessionId = this.sessionId || 'session_' + Date.now();
+    const currentSessionId = this.sessionId;
+    if (!currentSessionId) {
+      this.livenessFinalizando = false;
+      this.manejarErrorLiveness(new Error('La sesión de Face Liveness ya no está disponible.'));
+      return;
+    }
 
     this.setCargando(
       true,
       this.modoLiveness === 'registro'
         ? `Registrando en AWS (Session: ${currentSessionId})...`
-        : `Verificando identidad en AWS (Session: ${currentSessionId})...`
+        : `Verificando identidad contra la foto del perfil (Session: ${currentSessionId})...`
     );
 
     try {
       let res: any;
       if (this.modoLiveness === 'registro') {
         res = await this.faceService.registrarConLiveness(this.userId.trim(), currentSessionId);
-        const ok = res?.ok === true && (res?.faceId || res?.status === 'REGISTRADO');
+        const ok = res?.ok === true && typeof res?.faceId === 'string' && res.faceId.trim().length > 0;
         if (ok) {
           this.resultado = {
             tipo: 'success',
             titulo: 'Registro con Liveness Exitoso',
-            mensaje: `Usuario "${this.userId}" enrolado correctamente en AWS Rekognition (Face ID: ${res.faceId || 'OK'}).`,
+            mensaje: `Usuario "${this.userId}" enrolado correctamente en AWS Rekognition (Face ID: ${res.faceId}).`,
             detalles: res
           };
-          // Sincronizar en PostgreSQL
-          await this.faceService.registrarIndexacionBackend(this.userId.trim(), res.faceId).catch(() => {});
+          try {
+            await this.faceService.registrarIndexacionBackend(this.userId.trim(), res.faceId);
+          } catch (backendError) {
+            this.resultado = {
+              tipo: 'warning',
+              titulo: 'Registro AWS completado; PostgreSQL no sincronizado',
+              mensaje: 'El rostro se registró en AWS, pero no se pudo actualizar su estado en PostgreSQL.',
+              detalles: { aws: res, backendError }
+            };
+          }
         } else {
-          // AWS Rekognition devuelve ok: false si no se transmitió video streaming continuo
           this.resultado = {
             tipo: 'warning',
-            titulo: 'Sesión Liveness Sin Video Streaming',
-            mensaje: `AWS Rekognition requiere transmisión de video WebRTC (Amplify SDK) para calcular confianza > 85%. Respuesta AWS: "${res?.mensaje || 'Sin imagen de referencia'}". Puedes indexar el usuario en PostgreSQL pulsando el botón de respaldo.`,
+            titulo: 'Registro Liveness No Aprobado',
+            mensaje: res?.mensaje || 'AWS no confirmó el registro del rostro. Revisa el resultado técnico antes de volver a intentarlo.',
             detalles: res
           };
         }
       } else {
         res = await this.faceService.verificarConLiveness(this.userId.trim(), currentSessionId);
-        const match = (res?.ok === true && res?.matched === true) || (res?.similarity && res.similarity >= 80);
+        const match = res?.ok === true && res?.matched === true;
         if (match) {
+          const similarity = typeof res?.similarity === 'number' ? res.similarity : undefined;
           this.resultado = {
             tipo: 'success',
             titulo: 'Verificación Aprobada',
-            mensaje: `Identidad confirmada contra la colección "rostros-proyecto-final" para "${this.userId}". Confianza: ${res?.confidence ? res.confidence + '%' : '98%'}.`,
+            mensaje: `Identidad confirmada contra la foto de perfil guardada en PostgreSQL para "${this.userId}".${similarity !== undefined ? ` Similitud: ${similarity.toFixed(1)}%.` : ''}`,
             detalles: res
           };
-          await this.faceService.registrarVerificacionBackend(this.userId.trim(), true, res?.confidence || 96.5).catch(() => {});
+          try {
+            await this.faceService.registrarVerificacionBackend(this.userId.trim(), true, similarity);
+          } catch (backendError) {
+            this.resultado = {
+              tipo: 'warning',
+              titulo: 'Verificación AWS aprobada; PostgreSQL no sincronizado',
+              mensaje: 'AWS confirmó la identidad, pero no se pudo actualizar el estado de verificación en PostgreSQL.',
+              detalles: { aws: res, backendError }
+            };
+          }
         } else {
           this.resultado = {
             tipo: 'warning',
             titulo: 'Verificación Fallida',
-            mensaje: res?.mensaje || `El rostro verificado no coincide en la colección "rostros-proyecto-final" con el registro previo de "${this.userId}".`,
+            mensaje: res?.mensaje || `El rostro verificado no coincide con la foto de perfil de "${this.userId}".`,
             detalles: res
           };
         }
@@ -524,12 +504,15 @@ export class HomePage implements OnInit, OnDestroy {
       );
     } finally {
       this.setCargando(false);
+      this.livenessFinalizando = false;
     }
   }
 
-  cancelarLiveness() {
-    this.detenerCamara();
+  cancelarLiveness(): void {
+    this.limpiarWidgetLiveness();
     this.mostrarLiveness = false;
+    this.sessionId = null;
+    this.livenessFinalizando = false;
     this.setCargando(false);
     this.resultado = {
       tipo: 'info',

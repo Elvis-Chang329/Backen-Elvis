@@ -473,11 +473,8 @@
 
   </div>
 
-  <!-- PANTALLA COMPLETA DE FACE LIVENESS (ÓVALO + CÁMARA + DESTELLOS DE COLOR) -->
+  <!-- El detector real transmite el video a Amazon Rekognition -->
   <div class="liveness-fullscreen" *ngIf="mostrarLiveness">
-    <!-- Capa de destello de color para análisis lumínico 3D -->
-    <div class="color-flash-overlay" [style.background-color]="livenessColorFlash"></div>
-
     <div class="liveness-header-bar">
       <div class="liveness-header-info">
         <ion-icon name="shield-checkmark-outline"></ion-icon>
@@ -491,30 +488,8 @@
       </button>
     </div>
 
-    <!-- Visor de Cámara con el Óvalo Biométrico -->
-    <div class="liveness-viewport">
-      <video #videoElement autoplay playsinline muted class="live-video"></video>
-
-      <!-- Máscara con el Óvalo Centrado -->
-      <div class="oval-mask-container">
-        <div class="biometric-oval" [ngClass]="livenessEstadoVisual">
-          <div class="oval-scanner-beam"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Panel de Instrucciones y Progreso -->
-    <div class="liveness-footer">
-      <div class="instruction-container">
-        <span class="mode-tag">{{ modoLiveness === 'registro' ? 'Enrolamiento' : 'Verificación' }}</span>
-        <h3>{{ livenessPaso }}</h3>
-      </div>
-
-      <div class="progress-bar-wrapper">
-        <div class="progress-fill" [style.width.%]="livenessProgreso"></div>
-      </div>
-
-      <span class="progress-percentage">{{ livenessProgreso }}% completado</span>
+    <div class="liveness-detector-host">
+      <div #livenessMount></div>
     </div>
   </div>
 </ion-content>

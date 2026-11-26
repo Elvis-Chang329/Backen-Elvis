@@ -27,6 +27,24 @@
             "index": "src/index.html",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": [
+              "react",
+              "react-dom",
+              "react-dom/client",
+              "react/jsx-runtime",
+              "lodash/kebabCase.js",
+              "lodash/debounce.js",
+              "lodash/pickBy.js",
+              "lodash/isEqual.js",
+              "lodash/merge.js",
+              "use-sync-external-store/shim/with-selector",
+              "node-fetch",
+              "seedrandom",
+              "qrcode",
+              "long",
+              "buffer",
+              "crc-32"
+            ],
             "inlineStyleLanguage": "scss",
             "assets": [
               {
@@ -35,7 +53,12 @@
                 "output": "assets"
               }
             ],
-            "styles": ["src/global.scss", "src/theme/variables.scss"],
+            "styles": [
+              "src/global.scss",
+              "src/theme/variables.scss",
+              "node_modules/@aws-amplify/ui-react/styles.css",
+              "node_modules/@aws-amplify/ui-react-liveness/styles.css"
+            ],
             "scripts": [],
             "browser": "src/main.ts"
           },

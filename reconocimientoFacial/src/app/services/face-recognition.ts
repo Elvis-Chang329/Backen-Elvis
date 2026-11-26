@@ -24,28 +24,9 @@ export class FaceRecognitionService {
   constructor(private http: HttpClient) {}
 
   /**
-   * 1. Crear sesión de Face Liveness en AWS
+   * Crear la sesión con el mismo backend que recupera sus resultados
    */
-  async crearSesionLiveness(): Promise<{ ok: boolean; sessionId: string }> {
-    const response = await firstValueFrom(
-      this.http
-        .post<{ ok: boolean; sessionId: string }>(this.registroUrl, {
-          action: 'create_session',
-        })
-        .pipe(timeout(this.TIMEOUT_MS))
-    );
-
-    if (!response?.ok || !response.sessionId) {
-      throw new Error('AWS no devolvió un ID válido para la sesión de Face Liveness.');
-    }
-
-    return response;
-  }
-
-  /**
-   * Crear la sesión de verificación con el mismo backend que recupera sus resultados
-   */
-  async crearSesionLivenessParaVerificacion(): Promise<{ ok: boolean; sessionId: string }> {
+  async crearSesionLivenessBackend(): Promise<{ ok: boolean; sessionId: string }> {
     const response = await firstValueFrom(
       this.http
         .post<{ sessionId?: string; SessionId?: string }>(

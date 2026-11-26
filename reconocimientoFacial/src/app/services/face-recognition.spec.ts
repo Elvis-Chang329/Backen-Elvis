@@ -25,8 +25,8 @@ describe('FaceRecognition', () => {
     expect(service).toBeTruthy();
   });
 
-  it('creates verification liveness sessions through the backend', async () => {
-    const result = service.crearSesionLivenessParaVerificacion();
+  it('creates liveness sessions through the backend', async () => {
+    const result = service.crearSesionLivenessBackend();
 
     const request = httpTestingController.expectOne(
       'http://api.aplicacionesweb2026.com:3000/api/liveness/create-session'

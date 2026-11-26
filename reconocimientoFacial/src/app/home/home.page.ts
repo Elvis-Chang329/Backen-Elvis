@@ -364,9 +364,7 @@ export class HomePage implements OnInit, OnDestroy {
     try {
       configureFaceLiveness();
       this.setCargando(true, 'Generando sesión de Face Liveness en AWS...');
-      const res = modo === 'verificacion'
-        ? await this.faceService.crearSesionLivenessParaVerificacion()
-        : await this.faceService.crearSesionLiveness();
+      const res = await this.faceService.crearSesionLivenessBackend();
       this.sessionId = res.sessionId;
       this.modoLiveness = modo;
       this.setCargando(false);
